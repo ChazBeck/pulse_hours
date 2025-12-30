@@ -7,10 +7,9 @@ logs/*
 uploads/logos/*
 !uploads/logos/.gitignore
 
-# Configuration - Sensitive credentials
-# Note: You may want to create template files instead
-# config/db_config.php
-# config/app_config.php
+# Configuration - Sensitive credentials (use template files instead)
+config/db_config.php
+config/app_config.php
 
 # macOS
 .DS_Store

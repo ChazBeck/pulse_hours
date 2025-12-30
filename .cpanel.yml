@@ -1,0 +1,32 @@
+---
+# cPanel Deployment Configuration
+# This file automates deployment tasks when pushing from GitHub to cPanel
+
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/USERNAME/public_html
+    
+    # Create required directories if they don't exist
+    - mkdir -p $DEPLOYPATH/logs
+    - mkdir -p $DEPLOYPATH/uploads/logos
+    
+    # Set proper permissions
+    - chmod 755 $DEPLOYPATH/logs
+    - chmod 755 $DEPLOYPATH/uploads
+    - chmod 755 $DEPLOYPATH/uploads/logos
+    - chmod 644 $DEPLOYPATH/config/.htaccess
+    - chmod 644 $DEPLOYPATH/includes/.htaccess
+    - chmod 644 $DEPLOYPATH/database/.htaccess
+    - chmod 644 $DEPLOYPATH/uploads/.htaccess
+    - chmod 644 $DEPLOYPATH/logs/.htaccess
+    
+    # Copy config templates if config files don't exist (first deployment)
+    - /bin/bash -c "if [ ! -f $DEPLOYPATH/config/app_config.php ]; then cp $DEPLOYPATH/config/app_config.example.php $DEPLOYPATH/config/app_config.php; fi"
+    - /bin/bash -c "if [ ! -f $DEPLOYPATH/config/db_config.php ]; then cp $DEPLOYPATH/config/db_config.example.php $DEPLOYPATH/config/db_config.php; fi"
+    
+    # Set config file permissions (keep private)
+    - /bin/bash -c "if [ -f $DEPLOYPATH/config/app_config.php ]; then chmod 600 $DEPLOYPATH/config/app_config.php; fi"
+    - /bin/bash -c "if [ -f $DEPLOYPATH/config/db_config.php ]; then chmod 600 $DEPLOYPATH/config/db_config.php; fi"
+    
+    # Ensure logs directory stays writable
+    - chmod 755 $DEPLOYPATH/logs
