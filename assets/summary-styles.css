@@ -1,0 +1,205 @@
+/* Weekly Summary Page Styles */
+
+.summary-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.summary-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.summary-header h1 {
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.summary-header .week-info {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+}
+
+.summary-card {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 1.5rem;
+}
+
+.summary-card h2 {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.pulse-summary {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.pulse-item {
+    text-align: center;
+}
+
+.pulse-item .label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pulse-item .value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.pulse-item .value-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.client-section {
+    margin-bottom: 2rem;
+}
+
+.client-section:last-child {
+    margin-bottom: 0;
+}
+
+.client-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.client-logo {
+    height: 32px;
+    max-width: 120px;
+    object-fit: contain;
+}
+
+.client-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.project-section {
+    margin-bottom: 1rem;
+    padding-left: 1rem;
+}
+
+.project-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.task-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: var(--gray-100);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.task-row:last-child {
+    margin-bottom: 0;
+}
+
+.task-name {
+    color: var(--text-primary);
+}
+
+.task-hours {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.total-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--gray-200);
+    text-align: right;
+}
+
+.total-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: 1rem;
+}
+
+.total-hours {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.actions {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.actions a {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    background: var(--gray-200);
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.actions a:hover {
+    background: var(--gray-300);
+}
+
+@media (max-width: 640px) {
+    .summary-container {
+        padding: 1rem;
+    }
+
+    .summary-card {
+        padding: 1.5rem;
+    }
+
+    .pulse-summary {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .task-row {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+}

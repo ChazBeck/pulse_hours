@@ -1,0 +1,52 @@
+# Logs - Don't commit error logs
+logs/*
+!logs/.htaccess
+!logs/.gitignore
+
+# Uploads - Don't commit uploaded files
+uploads/logos/*
+!uploads/logos/.gitignore
+
+# Configuration - Sensitive credentials
+# Note: You may want to create template files instead
+# config/db_config.php
+# config/app_config.php
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Composer (if used later)
+vendor/
+composer.lock
+
+# Environment files
+.env
+.env.local

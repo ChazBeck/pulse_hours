@@ -1,0 +1,6 @@
+# Deny all web access to log files
+# Protects error logs from public viewing
+
+<Files "*">
+    Require all denied
+</Files>

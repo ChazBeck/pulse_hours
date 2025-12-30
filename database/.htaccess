@@ -1,0 +1,6 @@
+# Deny all access to database directory
+# Prevents direct access to SQL files
+
+<Files "*">
+    Require all denied
+</Files>

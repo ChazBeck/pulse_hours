@@ -1,0 +1,6 @@
+# Deny all access to config directory
+# Prevents direct web access to configuration files
+
+<Files "*">
+    Require all denied
+</Files>

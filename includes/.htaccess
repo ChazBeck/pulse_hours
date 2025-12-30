@@ -1,0 +1,6 @@
+# Deny all access to includes directory
+# Prevents direct web access to PHP library files
+
+<Files "*">
+    Require all denied
+</Files>

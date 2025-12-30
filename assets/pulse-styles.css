@@ -1,0 +1,240 @@
+/* Pulse Check-in Page Styles */
+
+.pulse-container {
+    max-width: 700px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.step-indicator {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.step-indicator h3 {
+    color: var(--primary-color);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.step-indicator h1 {
+    color: var(--text-primary);
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.step-indicator p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.pulse-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-md);
+}
+
+.week-selector {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.week-selector h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.week-options {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.week-option {
+    flex: 1;
+    min-width: 200px;
+}
+
+.week-option input[type="radio"] {
+    display: none;
+}
+
+.week-option label {
+    display: block;
+    padding: 1rem 1.5rem;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.week-option label:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(229, 131, 37, 0.05);
+}
+
+.week-option input[type="radio"]:checked + label {
+    border-color: var(--primary-color);
+    background-color: rgba(229, 131, 37, 0.1);
+    font-weight: 600;
+}
+
+.week-option .week-title {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.week-option .week-dates {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.question-section {
+    margin-bottom: 1.5rem;
+}
+
+.question-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.scale-container {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+.scale-option {
+    flex: 0 0 auto;
+}
+
+.scale-option input[type="radio"] {
+    display: none;
+}
+
+.scale-option label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border: 2px solid var(--gray-300);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1.25rem;
+    position: relative;
+}
+
+.scale-option label:hover {
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.scale-option input[type="radio"]:checked + label {
+    border-color: var(--primary-color);
+    background-color: var(--primary-color);
+    color: white;
+    transform: scale(1.15);
+    box-shadow: 0 4px 8px rgba(229, 131, 37, 0.3);
+}
+
+.scale-number {
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.scale-emoji {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.workload-scale .scale-option label {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--border-radius);
+}
+
+.workload-scale .scale-option label .scale-number {
+    font-size: 1rem;
+}
+
+.scale-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.existing-entry-notice {
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 2px solid var(--success-color);
+    border-radius: var(--border-radius);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.existing-entry-notice p {
+    color: var(--success-color);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.existing-entry-notice small {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.submit-section {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .pulse-card {
+        padding: 1.5rem;
+    }
+
+    .scale-container {
+        gap: 0.5rem;
+    }
+
+    .scale-option label {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+
+    .workload-scale .scale-option label {
+        width: 40px;
+        height: 40px;
+    }
+
+    .week-options {
+        flex-direction: column;
+    }
+
+    .week-option {
+        min-width: 100%;
+    }
+}
