@@ -3,12 +3,8 @@
 
 # Deny access to PHP files
 <FilesMatch "\.php$">
-    Require all denied
-</FilesMatch>
-
-# Allow only image files to be served
-<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg)$">
-    Require all granted
+    Order Allow,Deny
+    Deny from all
 </FilesMatch>
 
 # Disable PHP execution
