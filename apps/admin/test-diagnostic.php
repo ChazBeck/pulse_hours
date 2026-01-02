@@ -31,4 +31,19 @@ if (function_exists('url')) {
     echo "MISSING!<br>";
 }
 
-echo "8. All checks passed!";
+echo "8. Testing auth functions...<br>";
+auth_init();
+echo "9. auth_init() succeeded<br>";
+auth_require_admin();
+echo "10. auth_require_admin() succeeded<br>";
+
+echo "11. Testing database connection...<br>";
+$pdo = get_db_connection();
+echo "12. Database connected: " . ($pdo ? "YES" : "NO") . "<br>";
+
+echo "13. Testing query...<br>";
+$stmt = $pdo->query("SELECT COUNT(*) as count FROM hours LIMIT 1");
+$result = $stmt->fetch();
+echo "14. Query successful! Count: " . $result['count'] . "<br>";
+
+echo "15. All checks passed!";
