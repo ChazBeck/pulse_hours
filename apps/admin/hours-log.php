@@ -129,8 +129,8 @@ $weeks = $stmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hours Log - Pulse Hours</title>
-    <link rel="stylesheet" href="/assets/admin-styles.css">
-    <link rel="stylesheet" href="/assets/admin-nav-styles.css">
+    <link rel="stylesheet" href="<?= url('/assets/admin-styles.css') ?>">
+    <link rel="stylesheet" href="<?= url('/assets/admin-nav-styles.css') ?>">
     <style>
         .filters {
             background: white;
