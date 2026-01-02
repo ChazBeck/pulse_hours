@@ -42,8 +42,12 @@ $pdo = get_db_connection();
 echo "12. Database connected: " . ($pdo ? "YES" : "NO") . "<br>";
 
 echo "13. Testing query...<br>";
-$stmt = $pdo->query("SELECT COUNT(*) as count FROM hours LIMIT 1");
-$result = $stmt->fetch();
-echo "14. Query successful! Count: " . $result['count'] . "<br>";
+try {
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM hours LIMIT 1");
+    $result = $stmt->fetch();
+    echo "14. Query successful! Count: " . $result['count'] . "<br>";
+} catch (Exception $e) {
+    echo "14. QUERY FAILED: " . $e->getMessage() . "<br>";
+}
 
 echo "15. All checks passed!";
