@@ -6,12 +6,12 @@
  * client assignments, templates, tasks, status, and dates.
  */
 
+require_once __DIR__ . '/../../config/app_config.php';
 require __DIR__ . '/../../auth/include/auth_include.php';
 auth_init();
 auth_require_admin();
 
 require_once __DIR__ . '/../../config/db_config.php';
-require_once __DIR__ . '/../../config/app_config.php';
 $pdo = get_db_connection();
 
 $user = auth_get_user();
