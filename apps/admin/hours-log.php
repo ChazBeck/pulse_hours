@@ -5,7 +5,6 @@
  * Admin page to view and edit all hours entries across all users.
  */
 
-require_once __DIR__ . '/../../config/app_config.php';
 require __DIR__ . '/../../auth/include/auth_include.php';
 auth_init();
 auth_require_admin();

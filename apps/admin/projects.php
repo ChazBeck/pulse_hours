@@ -6,7 +6,6 @@
  * client assignments, templates, tasks, status, and dates.
  */
 
-require_once __DIR__ . '/../../config/app_config.php';
 require __DIR__ . '/../../auth/include/auth_include.php';
 auth_init();
 auth_require_admin();
