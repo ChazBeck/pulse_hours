@@ -203,6 +203,46 @@ CREATE TABLE IF NOT EXISTS `pulse` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
+-- Hours Table
+-- ============================================================================
+-- Stores time tracking entries for users working on tasks
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS `hours` (
+    `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT UNSIGNED NOT NULL,
+    `project_id` INT UNSIGNED NOT NULL,
+    `task_id` INT UNSIGNED NOT NULL,
+    `date_worked` DATE NOT NULL,
+    `year_week` VARCHAR(10) NOT NULL,
+    `hours` DECIMAL(5,2) NOT NULL,
+    `date_created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_project_id` (`project_id`),
+    INDEX `idx_task_id` (`task_id`),
+    INDEX `idx_date_worked` (`date_worked`),
+    INDEX `idx_year_week` (`year_week`),
+    UNIQUE KEY `unique_user_task_date` (`user_id`, `task_id`, `date_worked`),
+    
+    CONSTRAINT `fk_hours_user_id`
+        FOREIGN KEY (`user_id`)
+        REFERENCES `users`(`id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT `fk_hours_project_id`
+        FOREIGN KEY (`project_id`)
+        REFERENCES `projects`(`id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT `fk_hours_task_id`
+        FOREIGN KEY (`task_id`)
+        REFERENCES `tasks`(`id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
 -- Initial Data - Default Admin User
 -- ============================================================================
 -- Email: admin@plusehours.com
