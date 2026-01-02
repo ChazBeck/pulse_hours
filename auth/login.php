@@ -181,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-container">
         <div class="login-box">
             <div class="login-header">
-                <h1>PluseHours</h1>
+                <h1>Veerless Pulse</h1>
                 <p>Sign in to your account</p>
             </div>
             
@@ -222,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
             
             <div class="login-footer">
-                <p>&copy; <?= date('Y') ?> PluseHours. All rights reserved.</p>
+                <p>&copy; <?= date('Y') ?> Veerless. All rights reserved.</p>
             </div>
         </div>
     </div>
