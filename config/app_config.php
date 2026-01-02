@@ -36,7 +36,7 @@ if (!defined('APP_ENV')) {
  * This is used for redirects and asset paths
  */
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/plusehours/'); // Change to '/' for production
+    define('BASE_URL', '/apps/pulsehours/'); // Production path
 }
 
 /**
