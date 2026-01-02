@@ -50,4 +50,52 @@ try {
     echo "14. QUERY FAILED: " . $e->getMessage() . "<br>";
 }
 
-echo "15. All checks passed!";
+echo "15. Testing hours-log.php query...<br>";
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            h.id,
+            h.date_worked,
+            h.hours,
+            h.year_week,
+            h.date_created,
+            u.email,
+            u.first_name,
+            u.last_name,
+            c.name as client_name,
+            p.name as project_name,
+            t.name as task_name
+        FROM hours h
+        JOIN users u ON h.user_id = u.id
+        JOIN tasks t ON h.task_id = t.id
+        JOIN projects p ON h.project_id = p.id
+        JOIN clients c ON p.client_id = c.id
+        ORDER BY h.date_worked DESC
+        LIMIT 5
+    ");
+    $stmt->execute();
+    $hours_entries = $stmt->fetchAll();
+    echo "16. Hours-log query successful! Found " . count($hours_entries) . " entries<br>";
+} catch (Exception $e) {
+    echo "16. HOURS-LOG QUERY FAILED: " . $e->getMessage() . "<br>";
+}
+
+echo "17. Testing projects.php query...<br>";
+try {
+    $stmt = $pdo->query("
+        SELECT 
+            p.id,
+            p.name,
+            p.client_id,
+            c.name AS client_name
+        FROM projects p
+        INNER JOIN clients c ON p.client_id = c.id
+        LIMIT 5
+    ");
+    $projects = $stmt->fetchAll();
+    echo "18. Projects query successful! Found " . count($projects) . " projects<br>";
+} catch (Exception $e) {
+    echo "18. PROJECTS QUERY FAILED: " . $e->getMessage() . "<br>";
+}
+
+echo "19. All checks passed!";
