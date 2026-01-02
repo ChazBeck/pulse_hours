@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS `clients` (
 CREATE TABLE IF NOT EXISTS `projects` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `client_id` INT UNSIGNED NOT NULL,
+    `project_template_id` INT UNSIGNED NULL,
     `name` VARCHAR(255) NOT NULL,
     `description` TEXT NULL,
     `start_date` DATE NULL,
@@ -99,6 +100,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX `idx_client_id` (`client_id`),
+    INDEX `idx_project_template_id` (`project_template_id`),
     INDEX `idx_status` (`status`),
     INDEX `idx_active` (`active`),
     
@@ -106,6 +108,11 @@ CREATE TABLE IF NOT EXISTS `projects` (
         FOREIGN KEY (`client_id`)
         REFERENCES `clients`(`id`)
         ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT `fk_projects_project_template_id`
+        FOREIGN KEY (`project_template_id`)
+        REFERENCES `project_templates`(`id`)
+        ON DELETE SET NULL
         ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
