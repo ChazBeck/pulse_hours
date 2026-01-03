@@ -18,6 +18,9 @@
         <a href="<?= url('/apps/admin/tasks.php') ?>" class="admin-nav-link <?= basename($_SERVER['PHP_SELF']) == 'tasks.php' ? 'active' : '' ?>">
             Tasks
         </a>
+        <a href="<?= url('/apps/admin/tasks-view.php') ?>" class="admin-nav-link <?= basename($_SERVER['PHP_SELF']) == 'tasks-view.php' ? 'active' : '' ?>">
+            Tasks View
+        </a>
         <a href="<?= url('/apps/admin/hours-log.php') ?>" class="admin-nav-link <?= basename($_SERVER['PHP_SELF']) == 'hours-log.php' ? 'active' : '' ?>">
             Hours Log
         </a>
