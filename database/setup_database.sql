@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS `pulse` (
 CREATE TABLE IF NOT EXISTS `hours` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `user_id` INT UNSIGNED NOT NULL,
-    `project_id` INT UNSIGNED NOT NULL,
+    `project_id` INT UNSIGNED NULL,
     `task_id` INT UNSIGNED NOT NULL,
     `date_worked` DATE NOT NULL,
     `year_week` VARCHAR(10) NOT NULL,

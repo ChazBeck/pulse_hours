@@ -41,8 +41,8 @@ $stmt = $pdo->prepare("
         c.client_logo
     FROM hours h
     JOIN tasks t ON h.task_id = t.id
-    JOIN projects p ON h.project_id = p.id
-    JOIN clients c ON p.client_id = c.id
+    LEFT JOIN projects p ON h.project_id = p.id
+    JOIN clients c ON t.client_id = c.id
     WHERE h.user_id = ? AND h.year_week = ?
     ORDER BY c.name, p.name, t.name, h.date_worked
 ");
@@ -55,7 +55,7 @@ $total_hours = 0;
 
 foreach ($hours_entries as $entry) {
     $client = $entry['client_name'];
-    $project = $entry['project_name'];
+    $project = $entry['project_name'] ?? 'General Tasks';
     $task = $entry['task_name'];
     
     if (!isset($grouped_hours[$client])) {
