@@ -44,6 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hours = $_POST['hours'];
             $date_worked = $_POST['date_worked'];
             
+            // Convert empty string to 0
+            if ($hours === '' || $hours === null) {
+                $hours = 0;
+            }
+            
             if (!is_numeric($hours) || $hours < 0) {
                 throw new Exception('Hours must be a non-negative number');
             }
@@ -485,7 +490,7 @@ $weeks = $stmt->fetchAll();
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h3>Edit Hours Entry</h3>
-            <form method="POST" action="">
+            <form method="POST" action="" id="editForm">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
                 <input type="hidden" name="entry_id" id="edit_entry_id">
                 
@@ -496,7 +501,7 @@ $weeks = $stmt->fetchAll();
                 
                 <div class="form-group">
                     <label>Hours</label>
-                    <input type="number" name="hours" id="edit_hours" step="0.25" min="0" max="24">
+                    <input type="number" name="hours" id="edit_hours" step="0.25" min="0" max="24" value="0">
                     <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
                         Can be set to 0 if needed
                     </small>
