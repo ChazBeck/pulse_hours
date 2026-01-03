@@ -503,7 +503,10 @@ $weeks = $stmt->fetchAll();
                 
                 <div class="form-group">
                     <label>Hours</label>
-                    <input type="number" name="hours" id="edit_hours" step="0.25" min="0" max="24" required>
+                    <input type="number" name="hours" id="edit_hours" step="0.25" min="0" max="24">
+                    <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
+                        Set to 0 to delete this entry
+                    </small>
                 </div>
                 
                 <div class="modal-actions">
