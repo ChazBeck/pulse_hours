@@ -133,9 +133,10 @@ $stmt = $pdo->prepare("
 $stmt->execute();
 $clients = $stmt->fetchAll();
 
-// For each client, get active projects with active tasks
+// For each client, get active projects with active tasks AND client-level tasks
 $client_data = [];
 foreach ($clients as $client) {
+    // Get active projects
     $stmt = $pdo->prepare("
         SELECT 
             p.id as project_id,
@@ -181,20 +182,53 @@ foreach ($clients as $client) {
         $client_projects[] = $project;
     }
     
-    // Only include clients that have projects with tasks
-    if (!empty($client_projects)) {
-        $has_tasks = false;
-        foreach ($client_projects as $p) {
-            if (!empty($p['tasks'])) {
-                $has_tasks = true;
-                break;
-            }
+    // Also get client-level tasks (tasks with no project)
+    $stmt = $pdo->prepare("
+        SELECT 
+            t.id as task_id,
+            t.name as task_name,
+            t.status as task_status
+        FROM tasks t
+        WHERE t.client_id = ? AND t.project_id IS NULL AND t.status != 'completed'
+        ORDER BY t.name ASC
+    ");
+    $stmt->execute([$client['client_id']]);
+    $client_level_tasks = $stmt->fetchAll();
+    
+    // Get existing hours for client-level tasks
+    $client_tasks = [];
+    foreach ($client_level_tasks as $task) {
+        $stmt = $pdo->prepare("
+            SELECT date_worked, hours 
+            FROM hours 
+            WHERE user_id = ? AND task_id = ? AND year_week = ?
+            ORDER BY date_worked DESC
+        ");
+        $stmt->execute([$user['id'], $task['task_id'], $target_year_week]);
+        $task['existing_hours'] = $stmt->fetchAll();
+        $client_tasks[] = $task;
+    }
+    
+    // Include clients that have either projects with tasks OR client-level tasks
+    $has_tasks = false;
+    
+    // Check if any project has tasks
+    foreach ($client_projects as $p) {
+        if (!empty($p['tasks'])) {
+            $has_tasks = true;
+            break;
         }
-        
-        if ($has_tasks) {
-            $client['projects'] = $client_projects;
-            $client_data[] = $client;
-        }
+    }
+    
+    // Also check if there are client-level tasks
+    if (!empty($client_tasks)) {
+        $has_tasks = true;
+    }
+    
+    if ($has_tasks) {
+        $client['projects'] = $client_projects;
+        $client['client_tasks'] = $client_tasks;
+        $client_data[] = $client;
     }
 }
 
@@ -289,6 +323,41 @@ foreach ($clients as $client) {
                                             </div>
                                         <?php endif; ?>
                                     <?php endforeach; ?>
+                                    
+                                    <?php if (!empty($client['client_tasks'])): ?>
+                                        <div class="project-section">
+                                            <div class="project-header" onclick="toggleProject(this)">
+                                                <span class="project-name"><em>General Tasks</em></span>
+                                                <span class="project-toggle">▼</span>
+                                            </div>
+                                            <div class="project-content">
+                                                <?php foreach ($client['client_tasks'] as $task): ?>
+                                                    <div class="task-row">
+                                                        <div class="task-name">
+                                                            <?= htmlspecialchars($task['task_name']) ?>
+                                                            <?php if (!empty($task['existing_hours'])): ?>
+                                                                <div class="existing-hours">
+                                                                    <?php foreach ($task['existing_hours'] as $h): ?>
+                                                                        <?= date('M j', strtotime($h['date_worked'])) ?>: <?= $h['hours'] ?>h
+                                                                    <?php endforeach; ?>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <div class="task-hours-input">
+                                                            <input 
+                                                                type="number" 
+                                                                name="hours[<?= $task['task_id'] ?>]" 
+                                                                class="hours-input"
+                                                                step="0.25"
+                                                                min="0"
+                                                                max="24"
+                                                            >
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>

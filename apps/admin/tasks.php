@@ -31,7 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // ADD NEW TASK
         if ($action === 'add') {
-            $project_id = intval($_POST['project_id'] ?? 0);
+            $client_id = intval($_POST['client_id'] ?? 0);
+            $project_id = !empty($_POST['project_id']) ? intval($_POST['project_id']) : null;
             $name = trim($_POST['name'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $status = $_POST['status'] ?? 'not-started';
@@ -40,13 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($name)) {
                 $message = 'Task name is required.';
                 $message_type = 'error';
-            } elseif ($project_id <= 0) {
-                $message = 'Please select a valid project.';
+            } elseif ($client_id <= 0) {
+                $message = 'Please select a valid client.';
                 $message_type = 'error';
             } else {
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO tasks (project_id, name, description, status) VALUES (?, ?, ?, ?)");
-                    $stmt->execute([$project_id, $name, $description, $status]);
+                    $stmt = $pdo->prepare("INSERT INTO tasks (client_id, project_id, name, description, status) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->execute([$client_id, $project_id, $name, $description, $status]);
                     $message = 'Task added successfully!';
                     $message_type = 'success';
                 } catch (PDOException $e) {
@@ -59,7 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // EDIT TASK
         elseif ($action === 'edit') {
             $id = intval($_POST['id'] ?? 0);
-            $project_id = intval($_POST['project_id'] ?? 0);
+            $client_id = intval($_POST['client_id'] ?? 0);
+            $project_id = !empty($_POST['project_id']) ? intval($_POST['project_id']) : null;
             $name = trim($_POST['name'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $status = $_POST['status'] ?? 'not-started';
@@ -70,13 +72,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($id <= 0) {
                 $message = 'Invalid task ID.';
                 $message_type = 'error';
-            } elseif ($project_id <= 0) {
-                $message = 'Please select a valid project.';
+            } elseif ($client_id <= 0) {
+                $message = 'Please select a valid client.';
                 $message_type = 'error';
             } else {
                 try {
-                    $stmt = $pdo->prepare("UPDATE tasks SET project_id = ?, name = ?, description = ?, status = ? WHERE id = ?");
-                    $stmt->execute([$project_id, $name, $description, $status, $id]);
+                    $stmt = $pdo->prepare("UPDATE tasks SET client_id = ?, project_id = ?, name = ?, description = ?, status = ? WHERE id = ?");
+                    $stmt->execute([$client_id, $project_id, $name, $description, $status, $id]);
                     $message = 'Task updated successfully!';
                     $message_type = 'success';
                 } catch (PDOException $e) {
@@ -116,9 +118,8 @@ $edit_task = null;
 if (isset($_GET['edit'])) {
     $edit_id = intval($_GET['edit']);
     $stmt = $pdo->prepare("
-        SELECT t.*, p.client_id
+        SELECT t.*
         FROM tasks t
-        INNER JOIN projects p ON t.project_id = p.id
         WHERE t.id = ?
     ");
     $stmt->execute([$edit_id]);
@@ -150,8 +151,8 @@ $stmt = $pdo->query("
         c.name as client_name,
         c.client_color
     FROM tasks t
-    INNER JOIN projects p ON t.project_id = p.id
-    INNER JOIN clients c ON p.client_id = c.id
+    INNER JOIN clients c ON t.client_id = c.id
+    LEFT JOIN projects p ON t.project_id = p.id
     ORDER BY t.created_at DESC
 ");
 $tasks = $stmt->fetchAll();
@@ -235,9 +236,9 @@ $tasks = $stmt->fetchAll();
                         </div>
                         
                         <div class="form-group">
-                            <label for="project_id">Project *</label>
-                            <select id="project_id" name="project_id" required>
-                                <option value="">-- Select a Project --</option>
+                            <label for="project_id">Project (Optional)</label>
+                            <select id="project_id" name="project_id">
+                                <option value="">-- No Project --</option>
                                 <?php foreach ($projects as $project): ?>
                                 <option value="<?= $project['id'] ?>" 
                                         data-client-id="<?= $project['client_id'] ?>"
@@ -247,7 +248,7 @@ $tasks = $stmt->fetchAll();
                                 <?php endforeach; ?>
                             </select>
                             <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
-                                Select a client first to filter projects
+                                Select a client first to filter projects, or leave empty for client-level task
                             </small>
                         </div>
                         
@@ -321,7 +322,13 @@ $tasks = $stmt->fetchAll();
                                             <strong><?= htmlspecialchars($task['client_name']) ?></strong>
                                         </div>
                                     </td>
-                                    <td><?= htmlspecialchars($task['project_name']) ?></td>
+                                    <td>
+                                        <?php if ($task['project_name']): ?>
+                                            <?= htmlspecialchars($task['project_name']) ?>
+                                        <?php else: ?>
+                                            <em style="color: #9ca3af;">No Project</em>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><strong><?= htmlspecialchars($task['name']) ?></strong></td>
                                     <td>
                                         <?php
