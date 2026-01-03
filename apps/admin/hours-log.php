@@ -44,20 +44,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hours = $_POST['hours'];
             $date_worked = $_POST['date_worked'];
             
-            if (!is_numeric($hours) || $hours <= 0) {
-                throw new Exception('Hours must be a positive number');
+            // If hours is 0 or empty, delete the entry instead
+            if ($hours === '' || $hours === '0' || $hours == 0) {
+                $stmt = $pdo->prepare("DELETE FROM hours WHERE id = ?");
+                $stmt->execute([$entry_id]);
+                $success_message = 'Entry removed (hours set to 0)';
+            } else {
+                if (!is_numeric($hours) || $hours <= 0) {
+                    throw new Exception('Hours must be a positive number');
+                }
+                
+                // Calculate year_week from date_worked
+                $year_week = date('o-W', strtotime($date_worked));
+                
+                $stmt = $pdo->prepare("
+                    UPDATE hours 
+                    SET hours = ?, date_worked = ?, year_week = ?
+                    WHERE id = ?
+                ");
+                $stmt->execute([$hours, $date_worked, $year_week, $entry_id]);
+                $success_message = 'Entry updated successfully';
             }
-            
-            // Calculate year_week from date_worked
-            $year_week = date('o-W', strtotime($date_worked));
-            
-            $stmt = $pdo->prepare("
-                UPDATE hours 
-                SET hours = ?, date_worked = ?, year_week = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([$hours, $date_worked, $year_week, $entry_id]);
-            $success_message = 'Entry updated successfully';
         } catch (Exception $e) {
             $error_message = 'Error updating entry: ' . $e->getMessage();
         }
