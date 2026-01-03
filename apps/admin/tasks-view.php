@@ -27,7 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // ADD NEW TASK
         if ($action === 'add') {
-            $project_id = intval($_POST['project_id'] ?? 0);
+            $client_id = intval($_POST['client_id'] ?? 0);
+            $project_id = !empty($_POST['project_id']) ? intval($_POST['project_id']) : null;
             $name = trim($_POST['name'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $status = $_POST['status'] ?? 'not-started';
@@ -35,13 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($name)) {
                 $message = 'Task name is required.';
                 $message_type = 'error';
-            } elseif ($project_id <= 0) {
-                $message = 'Please select a valid project.';
+            } elseif ($client_id <= 0) {
+                $message = 'Please select a valid client.';
                 $message_type = 'error';
             } else {
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO tasks (project_id, name, description, status) VALUES (?, ?, ?, ?)");
-                    $stmt->execute([$project_id, $name, $description, $status]);
+                    $stmt = $pdo->prepare("INSERT INTO tasks (client_id, project_id, name, description, status) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->execute([$client_id, $project_id, $name, $description, $status]);
                     $message = 'Task created successfully!';
                     $message_type = 'success';
                 } catch (PDOException $e) {
@@ -54,7 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // EDIT TASK
         elseif ($action === 'edit') {
             $id = intval($_POST['id'] ?? 0);
-            $project_id = intval($_POST['project_id'] ?? 0);
+            $client_id = intval($_POST['client_id'] ?? 0);
+            $project_id = !empty($_POST['project_id']) ? intval($_POST['project_id']) : null;
             $name = trim($_POST['name'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $status = $_POST['status'] ?? 'not-started';
@@ -65,13 +67,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($id <= 0) {
                 $message = 'Invalid task ID.';
                 $message_type = 'error';
-            } elseif ($project_id <= 0) {
-                $message = 'Please select a valid project.';
+            } elseif ($client_id <= 0) {
+                $message = 'Please select a valid client.';
                 $message_type = 'error';
             } else {
                 try {
-                    $stmt = $pdo->prepare("UPDATE tasks SET project_id = ?, name = ?, description = ?, status = ? WHERE id = ?");
-                    $stmt->execute([$project_id, $name, $description, $status, $id]);
+                    $stmt = $pdo->prepare("UPDATE tasks SET client_id = ?, project_id = ?, name = ?, description = ?, status = ? WHERE id = ?");
+                    $stmt->execute([$client_id, $project_id, $name, $description, $status, $id]);
                     $message = 'Task updated successfully!';
                     $message_type = 'success';
                 } catch (PDOException $e) {
@@ -145,8 +147,8 @@ $stmt = $pdo->prepare("
         t.description as task_description,
         t.created_at as task_created
     FROM tasks t
-    INNER JOIN projects p ON t.project_id = p.id
-    INNER JOIN clients c ON p.client_id = c.id
+    INNER JOIN clients c ON t.client_id = c.id
+    LEFT JOIN projects p ON t.project_id = p.id
     $where_sql
     ORDER BY c.name ASC, p.name ASC, t.name ASC
 ");
@@ -550,7 +552,7 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
                                         <?= htmlspecialchars($task['client_name']) ?>
                                     </span>
                                 </td>
-                                <td><?= htmlspecialchars($task['project_name']) ?></td>
+                                <td><?= $task['project_name'] ? htmlspecialchars($task['project_name']) : '<em style="color: #9ca3af;">No Project</em>' ?></td>
                                 <td>
                                     <strong><?= htmlspecialchars($task['task_name']) ?></strong>
                                     <?php if ($task['task_description']): ?>
@@ -588,11 +590,21 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
                 <input type="hidden" name="action" value="add">
                 
                 <div class="form-group">
-                    <label>Project *</label>
-                    <select name="project_id" required>
-                        <option value="">Select a project...</option>
+                    <label>Client *</label>
+                    <select name="client_id" id="add_client_id" required onchange="filterProjectsByClient(this.value, 'add')">
+                        <option value="">Select a client...</option>
+                        <?php foreach ($clients as $c): ?>
+                            <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Project (Optional)</label>
+                    <select name="project_id" id="add_project_id">
+                        <option value="">No project (client-level task)</option>
                         <?php foreach ($projects as $proj): ?>
-                            <option value="<?= $proj['id'] ?>"><?= htmlspecialchars($proj['name']) ?></option>
+                            <option value="<?= $proj['id'] ?>" data-client="<?= $proj['client_id'] ?>"><?= htmlspecialchars($proj['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -638,11 +650,21 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
                 <input type="hidden" name="id" id="edit_id">
                 
                 <div class="form-group">
-                    <label>Project *</label>
-                    <select name="project_id" id="edit_project_id" required>
-                        <option value="">Select a project...</option>
+                    <label>Client *</label>
+                    <select name="client_id" id="edit_client_id" required onchange="filterProjectsByClient(this.value, 'edit')">
+                        <option value="">Select a client...</option>
+                        <?php foreach ($clients as $c): ?>
+                            <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Project (Optional)</label>
+                    <select name="project_id" id="edit_project_id">
+                        <option value="">No project (client-level task)</option>
                         <?php foreach ($projects as $proj): ?>
-                            <option value="<?= $proj['id'] ?>"><?= htmlspecialchars($proj['name']) ?></option>
+                            <option value="<?= $proj['id'] ?>" data-client="<?= $proj['client_id'] ?>"><?= htmlspecialchars($proj['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -683,8 +705,35 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
     </form>
 
     <script>
+        function filterProjectsByClient(clientId, mode) {
+            const projectSelect = document.getElementById(mode + '_project_id');
+            const allOptions = projectSelect.querySelectorAll('option');
+            
+            allOptions.forEach(option => {
+                if (option.value === '') {
+                    option.style.display = 'block'; // Always show "No project" option
+                } else if (!clientId || option.dataset.client === clientId) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+            
+            // Reset selection if current project doesn't belong to selected client
+            if (projectSelect.value) {
+                const selectedOption = projectSelect.querySelector('option[value="' + projectSelect.value + '"]');
+                if (selectedOption && selectedOption.dataset.client !== clientId) {
+                    projectSelect.value = '';
+                }
+            }
+        }
+
         function openAddModal() {
             document.getElementById('addModal').classList.add('active');
+            // Reset form
+            document.getElementById('add_client_id').value = '';
+            document.getElementById('add_project_id').value = '';
+            filterProjectsByClient('', 'add');
         }
 
         function closeAddModal() {
@@ -693,7 +742,9 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
 
         function editTask(task) {
             document.getElementById('edit_id').value = task.task_id;
-            document.getElementById('edit_project_id').value = task.project_id;
+            document.getElementById('edit_client_id').value = task.client_id;
+            filterProjectsByClient(task.client_id, 'edit');
+            document.getElementById('edit_project_id').value = task.project_id || '';
             document.getElementById('edit_name').value = task.task_name;
             document.getElementById('edit_description').value = task.task_description || '';
             document.getElementById('edit_status').value = task.task_status;

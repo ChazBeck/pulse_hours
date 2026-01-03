@@ -161,21 +161,28 @@ CREATE TABLE IF NOT EXISTS `task_templates` (
 -- ============================================================================
 -- Tasks Table
 -- ============================================================================
--- Stores tasks associated with projects
+-- Stores tasks associated with projects or clients directly
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS `tasks` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    `project_id` INT UNSIGNED NOT NULL,
+    `client_id` INT UNSIGNED NOT NULL,
+    `project_id` INT UNSIGNED NULL,
     `name` VARCHAR(255) NOT NULL,
     `description` TEXT NULL,
     `status` ENUM('not-started', 'in-progress', 'completed', 'blocked') NOT NULL DEFAULT 'not-started',
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
+    INDEX `idx_client_id` (`client_id`),
     INDEX `idx_project_id` (`project_id`),
     INDEX `idx_status` (`status`),
     
+    CONSTRAINT `fk_tasks_client_id`
+        FOREIGN KEY (`client_id`)
+        REFERENCES `clients`(`id`)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
     CONSTRAINT `fk_tasks_project_id`
         FOREIGN KEY (`project_id`)
         REFERENCES `projects`(`id`)
