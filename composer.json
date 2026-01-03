@@ -1,0 +1,25 @@
+{
+    "name": "plusehours/plusehours",
+    "description": "PluseHours Time Tracking Application",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "twig/twig": "^3.0",
+        "monolog/monolog": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PluseHours\\Repository\\": "src/Repository/",
+            "PluseHours\\Service\\": "src/Service/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit tests"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}

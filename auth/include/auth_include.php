@@ -195,6 +195,114 @@ function auth_verify_csrf($token) {
 }
 
 /**
+ * Check if IP address or email is rate limited
+ * 
+ * @param string $email User's email address
+ * @param string $ip_address IP address making the request
+ * @return array Result with 'is_blocked', 'attempts_remaining', and 'retry_after' keys
+ */
+function auth_check_rate_limit($email, $ip_address) {
+    try {
+        $pdo = get_db_connection();
+        
+        // Configuration: 5 attempts per 15 minutes
+        $max_attempts = 5;
+        $window_minutes = 15;
+        
+        // Check attempts from this IP in the last 15 minutes
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as attempt_count
+            FROM login_attempts
+            WHERE ip_address = ? 
+            AND success = 0
+            AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+        ");
+        $stmt->execute([$ip_address, $window_minutes]);
+        $ip_attempts = $stmt->fetch()['attempt_count'];
+        
+        // Check attempts for this email in the last 15 minutes
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as attempt_count, MAX(attempted_at) as last_attempt
+            FROM login_attempts
+            WHERE email = ? 
+            AND success = 0
+            AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+        ");
+        $stmt->execute([$email, $window_minutes]);
+        $email_result = $stmt->fetch();
+        $email_attempts = $email_result['attempt_count'];
+        
+        // If either IP or email has exceeded limit, block
+        $total_attempts = max($ip_attempts, $email_attempts);
+        
+        if ($total_attempts >= $max_attempts) {
+            // Calculate retry time
+            $last_attempt_time = strtotime($email_result['last_attempt']);
+            $retry_after = ($last_attempt_time + ($window_minutes * 60)) - time();
+            
+            return [
+                'is_blocked' => true,
+                'attempts_remaining' => 0,
+                'retry_after' => max($retry_after, 0),
+                'message' => sprintf(
+                    'Too many failed login attempts. Please try again in %d minutes.',
+                    ceil($retry_after / 60)
+                )
+            ];
+        }
+        
+        return [
+            'is_blocked' => false,
+            'attempts_remaining' => $max_attempts - $total_attempts,
+            'retry_after' => 0,
+            'message' => ''
+        ];
+        
+    } catch (PDOException $e) {
+        error_log("Rate limit check error: " . $e->getMessage());
+        // On error, allow the attempt (fail open)
+        return [
+            'is_blocked' => false,
+            'attempts_remaining' => 5,
+            'retry_after' => 0,
+            'message' => ''
+        ];
+    }
+}
+
+/**
+ * Record a login attempt
+ * 
+ * @param string $email User's email address
+ * @param string $ip_address IP address making the request
+ * @param bool $success Whether the login was successful
+ */
+function auth_record_login_attempt($email, $ip_address, $success) {
+    try {
+        $pdo = get_db_connection();
+        
+        $stmt = $pdo->prepare("
+            INSERT INTO login_attempts (email, ip_address, success, attempted_at)
+            VALUES (?, ?, ?, NOW())
+        ");
+        $stmt->execute([$email, $ip_address, $success ? 1 : 0]);
+        
+        // Clean up old attempts (older than 24 hours) to keep table size manageable
+        if (rand(1, 100) === 1) { // Only run 1% of the time
+            $cleanup_stmt = $pdo->prepare("
+                DELETE FROM login_attempts 
+                WHERE attempted_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            ");
+            $cleanup_stmt->execute();
+        }
+        
+    } catch (PDOException $e) {
+        error_log("Failed to record login attempt: " . $e->getMessage());
+        // Don't fail the login process if we can't record the attempt
+    }
+}
+
+/**
  * Perform login with email and password
  * 
  * Internal function used by login.php
@@ -206,6 +314,16 @@ function auth_verify_csrf($token) {
 function auth_login($email, $password) {
     try {
         $pdo = get_db_connection();
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        
+        // Check rate limiting
+        $rate_limit = auth_check_rate_limit($email, $ip_address);
+        if ($rate_limit['is_blocked']) {
+            return [
+                'success' => false,
+                'message' => $rate_limit['message']
+            ];
+        }
         
         // Find user by email
         $stmt = $pdo->prepare("
@@ -218,6 +336,7 @@ function auth_login($email, $password) {
         
         // Check if user exists
         if (!$user) {
+            auth_record_login_attempt($email, $ip_address, false);
             return [
                 'success' => false,
                 'message' => 'Invalid email or password'
@@ -226,6 +345,7 @@ function auth_login($email, $password) {
         
         // Check if account is active
         if (!$user['is_active']) {
+            auth_record_login_attempt($email, $ip_address, false);
             return [
                 'success' => false,
                 'message' => 'Your account has been deactivated'
@@ -234,11 +354,15 @@ function auth_login($email, $password) {
         
         // Verify password
         if (!password_verify($password, $user['password_hash'])) {
+            auth_record_login_attempt($email, $ip_address, false);
             return [
                 'success' => false,
                 'message' => 'Invalid email or password'
             ];
         }
+        
+        // Record successful login attempt
+        auth_record_login_attempt($email, $ip_address, true);
         
         // Login successful - regenerate session ID for security
         session_regenerate_id(true);
