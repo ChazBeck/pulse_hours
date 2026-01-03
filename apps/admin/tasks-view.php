@@ -11,6 +11,98 @@ auth_require_admin();
 
 $pdo = get_db_connection();
 
+$message = '';
+$message_type = '';
+
+// ============================================================================
+// Handle Form Submissions
+// ============================================================================
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) || !auth_verify_csrf($_POST['csrf_token'])) {
+        $message = 'Invalid security token. Please try again.';
+        $message_type = 'error';
+    } else {
+        $action = $_POST['action'] ?? '';
+        
+        // ADD NEW TASK
+        if ($action === 'add') {
+            $project_id = intval($_POST['project_id'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $status = $_POST['status'] ?? 'not-started';
+            
+            if (empty($name)) {
+                $message = 'Task name is required.';
+                $message_type = 'error';
+            } elseif ($project_id <= 0) {
+                $message = 'Please select a valid project.';
+                $message_type = 'error';
+            } else {
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO tasks (project_id, name, description, status) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$project_id, $name, $description, $status]);
+                    $message = 'Task created successfully!';
+                    $message_type = 'success';
+                } catch (PDOException $e) {
+                    $message = 'Error creating task: ' . $e->getMessage();
+                    $message_type = 'error';
+                }
+            }
+        }
+        
+        // EDIT TASK
+        elseif ($action === 'edit') {
+            $id = intval($_POST['id'] ?? 0);
+            $project_id = intval($_POST['project_id'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $status = $_POST['status'] ?? 'not-started';
+            
+            if (empty($name)) {
+                $message = 'Task name is required.';
+                $message_type = 'error';
+            } elseif ($id <= 0) {
+                $message = 'Invalid task ID.';
+                $message_type = 'error';
+            } elseif ($project_id <= 0) {
+                $message = 'Please select a valid project.';
+                $message_type = 'error';
+            } else {
+                try {
+                    $stmt = $pdo->prepare("UPDATE tasks SET project_id = ?, name = ?, description = ?, status = ? WHERE id = ?");
+                    $stmt->execute([$project_id, $name, $description, $status, $id]);
+                    $message = 'Task updated successfully!';
+                    $message_type = 'success';
+                } catch (PDOException $e) {
+                    $message = 'Error updating task: ' . $e->getMessage();
+                    $message_type = 'error';
+                }
+            }
+        }
+        
+        // DELETE TASK
+        elseif ($action === 'delete') {
+            $id = intval($_POST['id'] ?? 0);
+            
+            if ($id <= 0) {
+                $message = 'Invalid task ID.';
+                $message_type = 'error';
+            } else {
+                try {
+                    $stmt = $pdo->prepare("DELETE FROM tasks WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $message = 'Task deleted successfully!';
+                    $message_type = 'success';
+                } catch (PDOException $e) {
+                    $message = 'Error deleting task: ' . $e->getMessage();
+                    $message_type = 'error';
+                }
+            }
+        }
+    }
+}
+
 // ============================================================================
 // Fetch All Tasks with Client and Project Info
 // ============================================================================
@@ -227,6 +319,124 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
             font-size: 0.813rem;
             margin-top: 0.25rem;
         }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-edit {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #d17520;
+        }
+
+        .btn-delete {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .page-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -234,10 +444,17 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
     <?php include __DIR__ . '/_admin_nav.php'; ?>
     
     <main class="admin-content">
-        <div class="admin-header">
-            <h1>Tasks View</h1>
-            <p>Overview of all tasks by client and project</p>
+        <div class="page-actions">
+            <div>
+                <h1>Tasks View</h1>
+                <p>Overview of all tasks by client and project</p>
+            </div>
+            <button onclick="openAddModal()" class="btn btn-primary">+ Add Task</button>
         </div>
+
+        <?php if ($message): ?>
+            <div class="alert alert-<?= $message_type ?>"><?= htmlspecialchars($message) ?></div>
+        <?php endif; ?>
 
         <!-- Statistics -->
         <div class="stats">
@@ -322,6 +539,7 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
                             <th>Project</th>
                             <th>Task</th>
                             <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -344,6 +562,12 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
                                         <?= ucwords(str_replace('-', ' ', $task['task_status'])) ?>
                                     </span>
                                 </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-icon btn-edit" onclick='editTask(<?= json_encode($task) ?>)'>Edit</button>
+                                        <button class="btn-icon btn-delete" onclick="deleteTask(<?= $task['task_id'] ?>, '<?= htmlspecialchars(addslashes($task['task_name'])) ?>')">Delete</button>
+                                    </div>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -351,5 +575,150 @@ $unique_projects = count(array_unique(array_column($tasks, 'project_id')));
             <?php endif; ?>
         </div>
     </main>
+
+    <!-- Add Task Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Task</h3>
+                <button class="btn-close" onclick="closeAddModal()">&times;</button>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
+                <input type="hidden" name="action" value="add">
+                
+                <div class="form-group">
+                    <label>Project *</label>
+                    <select name="project_id" required>
+                        <option value="">Select a project...</option>
+                        <?php foreach ($projects as $proj): ?>
+                            <option value="<?= $proj['id'] ?>"><?= htmlspecialchars($proj['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Task Name *</label>
+                    <input type="text" name="name" required maxlength="255">
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status">
+                        <option value="not-started">Not Started</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="blocked">Blocked</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Task</h3>
+                <button class="btn-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="id" id="edit_id">
+                
+                <div class="form-group">
+                    <label>Project *</label>
+                    <select name="project_id" id="edit_project_id" required>
+                        <option value="">Select a project...</option>
+                        <?php foreach ($projects as $proj): ?>
+                            <option value="<?= $proj['id'] ?>"><?= htmlspecialchars($proj['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Task Name *</label>
+                    <input type="text" name="name" id="edit_name" required maxlength="255">
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" id="edit_description"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status" id="edit_status">
+                        <option value="not-started">Not Started</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="blocked">Blocked</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Form -->
+    <form id="deleteForm" method="POST" action="" style="display: none;">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="delete_id">
+    </form>
+
+    <script>
+        function openAddModal() {
+            document.getElementById('addModal').classList.add('active');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('active');
+        }
+
+        function editTask(task) {
+            document.getElementById('edit_id').value = task.task_id;
+            document.getElementById('edit_project_id').value = task.project_id;
+            document.getElementById('edit_name').value = task.task_name;
+            document.getElementById('edit_description').value = task.task_description || '';
+            document.getElementById('edit_status').value = task.task_status;
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        function deleteTask(taskId, taskName) {
+            if (confirm('Are you sure you want to delete "' + taskName + '"? This action cannot be undone.')) {
+                document.getElementById('delete_id').value = taskId;
+                document.getElementById('deleteForm').submit();
+            }
+        }
+
+        // Close modals when clicking outside
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
