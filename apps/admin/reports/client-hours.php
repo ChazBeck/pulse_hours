@@ -119,7 +119,7 @@ $orderedDisplayItems = array_merge($externalItems, $internalItems);
 $userLabels = array_values($allUsers);
 $displayDatasets = [];
 
-// Default color palette
+// Default color palette for external clients
 $defaultColors = [
     'rgba(247, 148, 29, 0.8)',   // Veerless orange
     'rgba(99, 102, 241, 0.8)',   // indigo
@@ -133,6 +133,17 @@ $defaultColors = [
     'rgba(156, 163, 175, 0.8)'   // gray
 ];
 
+// Specific color palette for internal (Veerless) tasks
+$internalColors = [
+    'rgba(0, 67, 79, 0.8)',      // #00434F - dark teal
+    'rgba(229, 131, 37, 0.8)',   // #e58325 - orange
+    'rgba(65, 86, 73, 0.8)',     // #415649 - forest green
+    'rgba(105, 100, 119, 0.8)',  // #696477 - purple gray
+    'rgba(4, 53, 70, 0.8)'       // #043546 - deep blue
+];
+
+$internalColorIndex = 0;
+
 // Build datasets for each display item
 foreach ($orderedDisplayItems as $index => $displayName) {
     $itemData = [];
@@ -142,13 +153,23 @@ foreach ($orderedDisplayItems as $index => $displayName) {
         $itemData[] = $userHours[$userId][$displayName] ?? 0;
     }
     
-    // Find color from original data
-    $color = $defaultColors[$index % count($defaultColors)];
+    // Determine if this is an internal task
+    $isInternal = false;
+    $clientColor = null;
     foreach ($hoursData as $row) {
-        if ($row['display_name'] === $displayName && !empty($row['client_color'])) {
-            $color = $row['client_color'];
+        if ($row['display_name'] === $displayName) {
+            $isInternal = $row['is_internal'];
+            $clientColor = $row['client_color'];
             break;
         }
+    }
+    
+    // Assign color based on internal/external
+    if ($isInternal) {
+        $color = $internalColors[$internalColorIndex % count($internalColors)];
+        $internalColorIndex++;
+    } else {
+        $color = !empty($clientColor) ? $clientColor : $defaultColors[$index % count($defaultColors)];
     }
     
     $displayDatasets[] = [
@@ -163,15 +184,24 @@ $clientNames = [];
 $clientHours = [];
 $clientColors = [];
 
+$internalColorIndex = 0;
+
 // Process all totals - they already come grouped correctly from repository
 foreach ($clientTotals as $index => $item) {
     // Use display_name which is either client_name (external) or task_name (internal)
     $clientNames[] = $item['display_name'];
     $clientHours[] = (float)$item['total_hours'];
     
-    $color = !empty($item['client_color']) 
-        ? $item['client_color'] 
-        : $defaultColors[$index % count($defaultColors)];
+    // Assign color based on internal/external
+    if ($item['is_internal']) {
+        $color = $internalColors[$internalColorIndex % count($internalColors)];
+        $internalColorIndex++;
+    } else {
+        $color = !empty($item['client_color']) 
+            ? $item['client_color'] 
+            : $defaultColors[$index % count($defaultColors)];
+    }
+    
     $clientColors[] = $color;
 }
 
