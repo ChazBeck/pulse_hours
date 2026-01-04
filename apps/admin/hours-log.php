@@ -11,6 +11,12 @@ auth_require_admin();
 
 $pdo = get_db_connection();
 
+// Load repositories
+require_once __DIR__ . '/../../src/Repository/autoload.php';
+$hoursRepo = new HoursRepository($pdo);
+$clientRepo = new ClientRepository($pdo);
+$userRepo = new UserRepository($pdo);
+
 // Success/error messages
 $success_message = '';
 $error_message = '';
@@ -27,8 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['delete_entry'])) {
         try {
             $entry_id = $_POST['entry_id'];
-            $stmt = $pdo->prepare("DELETE FROM hours WHERE id = ?");
-            $stmt->execute([$entry_id]);
+            $hoursRepo->delete($entry_id);
             $success_message = 'Entry deleted successfully';
         } catch (Exception $e) {
             $error_message = 'Error deleting entry: ' . $e->getMessage();
@@ -51,12 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Calculate year_week from date_worked
             $year_week = date('o-W', strtotime($date_worked));
             
-            $stmt = $pdo->prepare("
-                UPDATE hours 
-                SET hours = ?, date_worked = ?, year_week = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([$hours, $date_worked, $year_week, $entry_id]);
+            $hoursRepo->update($entry_id, [
+                'hours' => $hours,
+                'date_worked' => $date_worked,
+                'year_week' => $year_week
+            ]);
             $success_message = 'Entry updated successfully';
         } catch (Exception $e) {
             $error_message = 'Error updating entry: ' . $e->getMessage();
@@ -72,59 +76,28 @@ $filter_user = $_GET['user'] ?? '';
 $filter_client = $_GET['client'] ?? '';
 $filter_week = $_GET['week'] ?? '';
 
-$where_clauses = [];
-$params = [];
-
+// Build filters array for repository
+$filters = [];
 if ($filter_user) {
-    $where_clauses[] = "u.id = ?";
-    $params[] = $filter_user;
+    $filters['user_id'] = $filter_user;
 }
-
 if ($filter_client) {
-    $where_clauses[] = "c.id = ?";
-    $params[] = $filter_client;
+    $filters['client_id'] = $filter_client;
 }
-
 if ($filter_week) {
-    $where_clauses[] = "h.year_week = ?";
-    $params[] = $filter_week;
+    $filters['year_week'] = $filter_week;
 }
 
-$where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+// Use repository to fetch hours with all details
+$hours_entries = $hoursRepo->getAllWithDetails($filters);
 
-$stmt = $pdo->prepare("
-    SELECT 
-        h.id,
-        h.date_worked,
-        h.hours,
-        h.year_week,
-        h.date_created,
-        u.email,
-        u.first_name,
-        u.last_name,
-        c.name as client_name,
-        p.name as project_name,
-        t.name as task_name
-    FROM hours h
-    JOIN users u ON h.user_id = u.id
-    JOIN tasks t ON h.task_id = t.id
-    JOIN projects p ON h.project_id = p.id
-    JOIN clients c ON p.client_id = c.id
-    $where_sql
-    ORDER BY h.date_worked DESC, c.name, p.name, t.name
-");
-$stmt->execute($params);
-$hours_entries = $stmt->fetchAll();
+// Get filter options using repositories
+$users = $userRepo->getActive();
+$clients = $clientRepo->getActive();
 
-// Get filter options
-$stmt = $pdo->query("SELECT id, first_name, last_name, email FROM users WHERE is_active = 1 ORDER BY first_name, last_name");
-$users = $stmt->fetchAll();
-
-$stmt = $pdo->query("SELECT id, name FROM clients WHERE active = 1 ORDER BY name");
-$clients = $stmt->fetchAll();
-
-$stmt = $pdo->query("SELECT DISTINCT year_week FROM hours ORDER BY year_week DESC LIMIT 20");
-$weeks = $stmt->fetchAll();
+// Get distinct weeks using repository
+$weeks_array = $hoursRepo->getDistinctWeeks(20);
+$weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
 
 ?>
 <!DOCTYPE html>
@@ -465,7 +438,7 @@ $weeks = $stmt->fetchAll();
                                 <td class="date-cell"><?= date('M j, Y', strtotime($entry['date_worked'])) ?></td>
                                 <td class="user-cell"><?= htmlspecialchars($entry['first_name'] . ' ' . $entry['last_name']) ?></td>
                                 <td class="client-cell"><?= htmlspecialchars($entry['client_name']) ?></td>
-                                <td><?= htmlspecialchars($entry['project_name']) ?></td>
+                                <td><?= $entry['project_name'] ? htmlspecialchars($entry['project_name']) : '<em>No Project</em>' ?></td>
                                 <td><?= htmlspecialchars($entry['task_name']) ?></td>
                                 <td class="hours-cell"><?= number_format($entry['hours'], 2) ?>h</td>
                                 <td><?= htmlspecialchars($entry['year_week']) ?></td>

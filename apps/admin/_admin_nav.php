@@ -24,5 +24,34 @@
         <a href="<?= url('/apps/admin/hours-log.php') ?>" class="admin-nav-link <?= basename($_SERVER['PHP_SELF']) == 'hours-log.php' ? 'active' : '' ?>">
             Hours Log
         </a>
+        <div class="admin-nav-dropdown" id="reportsDropdown">
+            <button type="button" class="<?= strpos($_SERVER['PHP_SELF'], '/reports/') !== false ? 'active' : '' ?>" id="reportsBtn">
+                Reports ▾
+            </button>
+            <div class="admin-nav-dropdown-content" id="reportsMenu">
+                <a href="<?= url('/apps/admin/reports/pulse-workload.php') ?>">Pulse & Workload</a>
+                <a href="<?= url('/apps/admin/reports/client-hours.php') ?>">Client Hours</a>
+            </div>
+        </div>
     </div>
 </nav>
+
+<script>
+const btn = document.getElementById('reportsBtn');
+const dropdown = document.getElementById('reportsDropdown');
+
+if (btn) {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+    });
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    if (dropdown && !dropdown.contains(event.target)) {
+        dropdown.classList.remove('open');
+    }
+});
+</script>

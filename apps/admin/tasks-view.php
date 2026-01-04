@@ -9,6 +9,8 @@ require __DIR__ . '/../../auth/include/auth_include.php';
 auth_init();
 auth_require_admin();
 
+require_once __DIR__ . '/../../includes/FilterBuilder.php';
+
 $pdo = get_db_connection();
 
 $message = '';
@@ -113,25 +115,14 @@ $filter_client = $_GET['client'] ?? '';
 $filter_project = $_GET['project'] ?? '';
 $filter_status = $_GET['status'] ?? '';
 
-$where_clauses = [];
-$params = [];
+// Use FilterBuilder for cleaner WHERE clause construction
+$filter = new FilterBuilder();
+$filter->addFilter('c.id = ?', $filter_client)
+       ->addFilter('p.id = ?', $filter_project)
+       ->addFilter('t.status = ?', $filter_status);
 
-if ($filter_client) {
-    $where_clauses[] = "c.id = ?";
-    $params[] = $filter_client;
-}
-
-if ($filter_project) {
-    $where_clauses[] = "p.id = ?";
-    $params[] = $filter_project;
-}
-
-if ($filter_status) {
-    $where_clauses[] = "t.status = ?";
-    $params[] = $filter_status;
-}
-
-$where_sql = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+$where_sql = $filter->buildWhere();
+$params = $filter->getParams();
 
 $stmt = $pdo->prepare("
     SELECT 

@@ -6,7 +6,8 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 999;
+    overflow: visible;
 }
 
 .admin-nav-container {
@@ -15,7 +16,7 @@
     display: flex;
     gap: 0.5rem;
     padding: 0 2rem;
-    overflow-x: auto;
+    overflow: visible;
 }
 
 .admin-nav-link {
@@ -38,6 +39,76 @@
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
     font-weight: 600;
+}
+
+/* Dropdown Styles */
+.admin-nav-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.admin-nav-dropdown > button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 1rem 1.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.875rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: block;
+}
+
+.admin-nav-dropdown > button:hover {
+    color: var(--primary-color);
+    background: var(--gray-50);
+}
+
+.admin-nav-dropdown > button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.admin-nav-dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    min-width: 200px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    z-index: 99999;
+    margin-top: 3px;
+}
+
+.admin-nav-dropdown.open .admin-nav-dropdown-content {
+    display: block;
+}
+
+.admin-nav-dropdown-content a {
+    display: block;
+    padding: 0.75rem 1.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.admin-nav-dropdown-content a:last-child {
+    border-bottom: none;
+}
+
+.admin-nav-dropdown-content a:hover {
+    background: var(--gray-50);
+    color: var(--primary-color);
 }
 
 @media (max-width: 768px) {

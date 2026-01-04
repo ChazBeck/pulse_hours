@@ -243,10 +243,15 @@ foreach ($clients as $client) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Log Hours - Pulse Hours</title>
     <link rel="stylesheet" href="<?= url('/assets/admin-styles.css') ?>">
+    <link rel="stylesheet" href="<?= url('/assets/admin-nav-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('/assets/hours-styles.css') ?>">
 </head>
 <body>
     <?php include __DIR__ . '/../_header.php'; ?>
+    
+    <?php if ($user && $user['role'] === 'Admin'): ?>
+        <?php include __DIR__ . '/admin/_admin_nav.php'; ?>
+    <?php endif; ?>
     
     <main class="admin-content">
         <div class="hours-container">

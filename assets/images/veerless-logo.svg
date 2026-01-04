@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 300" width="1800" height="300">
+  <!-- Veerless star/asterisk icon -->
+  <g fill="#F7941D">
+    <!-- Top ray -->
+    <rect x="110" y="40" width="20" height="70" transform="rotate(0 120 105)"/>
+    <!-- Top-right ray -->
+    <rect x="110" y="40" width="20" height="70" transform="rotate(45 120 105)"/>
+    <!-- Right ray -->
+    <rect x="110" y="40" width="20" height="70" transform="rotate(90 120 105)"/>
+    <!-- Bottom-right ray -->
+    <rect x="110" y="40" width="20" height="70" transform="rotate(135 120 105)"/>
+    <!-- Bottom ray -->
+    <rect x="110" y="40" width="20" height="70" transform="rotate(180 120 105)"/>
+    <!-- Bottom-left ray -->
+    <rect x="110" y="40" width="20" height="70" transform="rotate(225 120 105)"/>
+    <!-- Left ray -->
+    <rect x="110" y="40" width="20" height="70" transform="rotate(270 120 105)"/>
+    <!-- Top-left ray -->
+    <rect x="110" y="40" width="20" height="70" transform="rotate(315 120 105)"/>
+    <!-- Center circle -->
+    <circle cx="120" cy="105" r="15"/>
+  </g>
+  
+  <!-- VEERLESS text -->
+  <text x="260" y="165" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="150" letter-spacing="10" fill="#F7941D">VEERLESS</text>
+</svg>

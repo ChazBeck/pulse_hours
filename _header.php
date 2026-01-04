@@ -19,7 +19,7 @@ if (function_exists('auth_get_user')) {
         <div class="header-content">
             <div class="logo">
                 <a href="<?= url('/') ?>">
-                    <h1>PluseHours</h1>
+                    <img src="<?= url('assets/images/veerless-logo-sunrise-rgb-1920px-w-144ppi.png') ?>" alt="Veerless" class="veerless-logo" style="height: 50px; width: auto;">
                 </a>
             </div>
             

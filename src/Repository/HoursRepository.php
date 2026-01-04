@@ -215,4 +215,77 @@ class HoursRepository extends BaseRepository {
         
         return $this->delete($id);
     }
+    
+    /**
+     * Get hours per user per client for a specific week
+     * 
+     * @param string $yearWeek Year-week string (e.g., "2026-01")
+     * @return array Array of user-client hour records
+     */
+    public function getHoursByUserAndClient($yearWeek) {
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                u.id as user_id,
+                u.first_name,
+                u.last_name,
+                c.id as client_id,
+                c.name as client_name,
+                SUM(h.hours) as total_hours
+            FROM hours h
+            JOIN tasks t ON h.task_id = t.id
+            JOIN clients c ON t.client_id = c.id
+            LEFT JOIN projects p ON h.project_id = p.id
+            JOIN users u ON h.user_id = u.id
+            WHERE h.year_week = ?
+                AND c.active = 1
+            GROUP BY u.id, c.id
+            ORDER BY u.last_name, u.first_name, c.name
+        ");
+        $stmt->execute([$yearWeek]);
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * Get total hours per client for a specific week
+     * 
+     * @param string $yearWeek Year-week string (e.g., "2026-01")
+     * @return array Array of client hour totals
+     */
+    public function getTotalsByClient($yearWeek) {
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                c.id as client_id,
+                c.name as client_name,
+                c.client_color,
+                c.is_internal,
+                SUM(h.hours) as total_hours
+            FROM hours h
+            JOIN tasks t ON h.task_id = t.id
+            JOIN clients c ON t.client_id = c.id
+            LEFT JOIN projects p ON h.project_id = p.id
+            WHERE h.year_week = ?
+                AND c.active = 1
+            GROUP BY c.id
+            ORDER BY c.is_internal ASC, total_hours DESC
+        ");
+        $stmt->execute([$yearWeek]);
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * Get distinct year-weeks from hours table
+     * 
+     * @param int $limit Maximum number of weeks to return
+     * @return array Array of year-week strings
+     */
+    public function getDistinctWeeks($limit = 20) {
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT year_week 
+            FROM hours 
+            ORDER BY year_week DESC 
+            LIMIT ?
+        ");
+        $stmt->execute([$limit]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
 }
