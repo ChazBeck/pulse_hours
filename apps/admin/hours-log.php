@@ -106,6 +106,7 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hours Log - Pulse Hours</title>
+    <?php include __DIR__ . '/../../includes/head.php'; ?>
     <link rel="stylesheet" href="<?= url('/assets/admin-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('/assets/admin-nav-styles.css') ?>">
     <style>

@@ -67,6 +67,7 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pulse & Workload Reports - PluseHours</title>
+    <?php include __DIR__ . '/../../../includes/head.php'; ?>
     <link rel="stylesheet" href="<?= url('assets/admin-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('assets/admin-nav-styles.css') ?>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
