@@ -469,7 +469,7 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
                 
                 <div class="form-group">
                     <label>Hours</label>
-                    <input type="number" name="hours" id="edit_hours" step="0.25" min="0" max="24" value="0">
+                    <input type="number" name="hours" id="edit_hours" step="0.25" min="0" max="75" value="0">
                     <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
                         Can be set to 0 if needed
                     </small>

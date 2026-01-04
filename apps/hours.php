@@ -319,7 +319,7 @@ foreach ($clients as $client) {
                                                                     class="hours-input"
                                                                     step="0.25"
                                                                     min="0"
-                                                                    max="24"
+                                                                    max="75"
                                                                 >
                                                             </div>
                                                         </div>
@@ -355,7 +355,7 @@ foreach ($clients as $client) {
                                                                 class="hours-input"
                                                                 step="0.25"
                                                                 min="0"
-                                                                max="24"
+                                                                max="75"
                                                             >
                                                         </div>
                                                     </div>
