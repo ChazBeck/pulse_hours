@@ -18,6 +18,7 @@ $user = auth_get_user();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - PluseHours</title>
+    <?php require_once __DIR__ . '/../../includes/head.php'; ?>
     <link rel="stylesheet" href="<?= url('assets/admin-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('assets/admin-nav-styles.css') ?>">
 </head>
