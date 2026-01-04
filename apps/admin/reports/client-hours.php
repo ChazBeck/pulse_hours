@@ -61,9 +61,12 @@ $internalTotals = array_filter($clientTotals, function($c) { return $c['is_inter
 // Organize data by user
 $userHours = [];
 $allUsers = [];
+$allDisplayItems = []; // Track unique display items (clients or tasks)
+
 foreach ($hoursData as $row) {
     $userId = $row['user_id'];
-    $clientId = $row['client_id'];
+    // Use display_name which is either client_name (external) or task_name (internal)
+    $displayKey = $row['display_name'];
     
     if (!isset($allUsers[$userId])) {
         $allUsers[$userId] = $row['first_name'] . ' ' . $row['last_name'];
@@ -73,14 +76,50 @@ foreach ($hoursData as $row) {
         $userHours[$userId] = [];
     }
     
-    $userHours[$userId][$clientId] = (float)$row['total_hours'];
+    // Store hours by display name
+    if (!isset($userHours[$userId][$displayKey])) {
+        $userHours[$userId][$displayKey] = 0;
+    }
+    $userHours[$userId][$displayKey] += (float)$row['total_hours'];
+    
+    // Track all unique display items
+    if (!in_array($displayKey, $allDisplayItems)) {
+        $allDisplayItems[] = $displayKey;
+    }
 }
+
+// Build chart data - iterate through display items not clients
+$userLabels = array_values($allUsers);
+$displayDatasets = [];
+
+// Group display items: external clients first, then internal tasks
+$externalItems = [];
+$internalItems = [];
+
+foreach ($hoursData as $row) {
+    $displayName = $row['display_name'];
+    if ($row['is_internal']) {
+        if (!in_array($displayName, $internalItems)) {
+            $internalItems[] = $displayName;
+        }
+    } else {
+        if (!in_array($displayName, $externalItems)) {
+            $externalItems[] = $displayName;
+        }
+    }
+}
+
+// Combine: external first, then internal
+$orderedDisplayItems = array_merge($externalItems, $internalItems);
+
+// Combine: external first, then internal
+$orderedDisplayItems = array_merge($externalItems, $internalItems);
 
 // Build chart data
 $userLabels = array_values($allUsers);
-$clientDatasets = [];
+$displayDatasets = [];
 
-// Default color palette for clients without colors
+// Default color palette
 $defaultColors = [
     'rgba(247, 148, 29, 0.8)',   // Veerless orange
     'rgba(99, 102, 241, 0.8)',   // indigo
@@ -94,23 +133,27 @@ $defaultColors = [
     'rgba(156, 163, 175, 0.8)'   // gray
 ];
 
-foreach ($clients as $index => $client) {
-    $clientId = $client['id'];
-    $clientData = [];
+// Build datasets for each display item
+foreach ($orderedDisplayItems as $index => $displayName) {
+    $itemData = [];
     
-    // Get hours for each user for this client
+    // Get hours for each user for this display item
     foreach (array_keys($allUsers) as $userId) {
-        $clientData[] = $userHours[$userId][$clientId] ?? 0;
+        $itemData[] = $userHours[$userId][$displayName] ?? 0;
     }
     
-    // Use client's defined color or fall back to default palette
-    $color = $client['client_color'] 
-        ? $client['client_color'] 
-        : $defaultColors[$index % count($defaultColors)];
+    // Find color from original data
+    $color = $defaultColors[$index % count($defaultColors)];
+    foreach ($hoursData as $row) {
+        if ($row['display_name'] === $displayName && !empty($row['client_color'])) {
+            $color = $row['client_color'];
+            break;
+        }
+    }
     
-    $clientDatasets[] = [
-        'label' => $client['name'],
-        'data' => $clientData,
+    $displayDatasets[] = [
+        'label' => $displayName,
+        'data' => $itemData,
         'backgroundColor' => $color
     ];
 }
@@ -120,31 +163,28 @@ $clientNames = [];
 $clientHours = [];
 $clientColors = [];
 
-// Add external clients first
-foreach ($externalTotals as $index => $client) {
-    $clientNames[] = $client['client_name'];
-    $clientHours[] = (float)$client['total_hours'];
+// Process all totals - they already come grouped correctly from repository
+foreach ($clientTotals as $index => $item) {
+    // Use display_name which is either client_name (external) or task_name (internal)
+    $clientNames[] = $item['display_name'];
+    $clientHours[] = (float)$item['total_hours'];
     
-    $color = $client['client_color'] 
-        ? $client['client_color'] 
+    $color = !empty($item['client_color']) 
+        ? $item['client_color'] 
         : $defaultColors[$index % count($defaultColors)];
     $clientColors[] = $color;
 }
 
-// Add internal clients (Veerless items)
-foreach ($internalTotals as $index => $client) {
-    $clientNames[] = $client['client_name'];
-    $clientHours[] = (float)$client['total_hours'];
-    
-    $color = $client['client_color'] 
-        ? $client['client_color'] 
-        : 'rgba(156, 163, 175, 0.8)'; // Gray for internal
-    $clientColors[] = $color;
+// Calculate totals (external vs internal)
+$externalHoursTotal = 0;
+$internalHoursTotal = 0;
+foreach ($clientTotals as $item) {
+    if ($item['is_internal']) {
+        $internalHoursTotal += (float)$item['total_hours'];
+    } else {
+        $externalHoursTotal += (float)$item['total_hours'];
+    }
 }
-
-// Calculate totals
-$externalHoursTotal = array_sum(array_column($externalTotals, 'total_hours'));
-$internalHoursTotal = array_sum(array_column($internalTotals, 'total_hours'));
 
 ?>
 <!DOCTYPE html>
@@ -295,7 +335,7 @@ $internalHoursTotal = array_sum(array_column($internalTotals, 'total_hours'));
     <script>
         const ctx = document.getElementById('clientHoursChart').getContext('2d');
         
-        const datasets = <?= json_encode($clientDatasets) ?>;
+        const datasets = <?= json_encode($displayDatasets) ?>;
         
         new Chart(ctx, {
             type: 'bar',
