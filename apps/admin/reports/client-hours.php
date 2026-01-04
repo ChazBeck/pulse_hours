@@ -159,7 +159,7 @@ foreach ($orderedDisplayItems as $index => $displayName) {
     foreach ($hoursData as $row) {
         if ($row['display_name'] === $displayName) {
             $isInternal = $row['is_internal'];
-            $clientColor = $row['client_color'];
+            $clientColor = $row['client_color'] ?? null;
             break;
         }
     }
