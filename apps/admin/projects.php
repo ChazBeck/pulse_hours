@@ -62,10 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([$project_template_id]);
                         $task_templates = $stmt->fetchAll();
                         
-                        $task_stmt = $pdo->prepare("INSERT INTO tasks (project_id, name, description, status) VALUES (?, ?, ?, 'not-started')");
+                        $task_stmt = $pdo->prepare("INSERT INTO tasks (client_id, project_id, name, description, status) VALUES (?, ?, ?, ?, 'not-started')");
                         
                         foreach ($task_templates as $task_template) {
                             $task_stmt->execute([
+                                $client_id,
                                 $project_id,
                                 $task_template['name'],
                                 $task_template['description']
