@@ -232,6 +232,7 @@ class HoursRepository extends BaseRepository {
                 u.last_name,
                 c.id as client_id,
                 c.name as client_name,
+                c.client_color,
                 c.is_internal,
                 t.id as task_id,
                 t.name as task_name,
