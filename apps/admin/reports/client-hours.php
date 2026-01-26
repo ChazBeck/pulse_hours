@@ -143,6 +143,7 @@ $internalColors = [
 ];
 
 $internalColorIndex = 0;
+$externalColorIndex = 0;
 
 // Build datasets for each display item
 foreach ($orderedDisplayItems as $index => $displayName) {
@@ -169,7 +170,9 @@ foreach ($orderedDisplayItems as $index => $displayName) {
         $color = $internalColors[$internalColorIndex % count($internalColors)];
         $internalColorIndex++;
     } else {
-        $color = !empty($clientColor) ? $clientColor : $defaultColors[$index % count($defaultColors)];
+        // Use client color if available, otherwise use default colors
+        $color = !empty($clientColor) ? $clientColor : $defaultColors[$externalColorIndex % count($defaultColors)];
+        $externalColorIndex++;
     }
     
     $displayDatasets[] = [
