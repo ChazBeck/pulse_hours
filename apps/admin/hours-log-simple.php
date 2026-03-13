@@ -6,7 +6,7 @@
 require __DIR__ . '/../../auth/include/auth_include.php';
 
 auth_init();
-auth_require_admin();
+pulse_require_admin();
 
 $pdo = get_db_connection();
 

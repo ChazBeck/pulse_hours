@@ -5,9 +5,8 @@
  * Admin page to view all tasks organized by client and project
  */
 
-require __DIR__ . '/../../auth/include/auth_include.php';
-auth_init();
-auth_require_admin();
+require __DIR__ . '/../../sso/sso_include.php';
+pulse_require_admin();
 
 require_once __DIR__ . '/../../includes/FilterBuilder.php';
 

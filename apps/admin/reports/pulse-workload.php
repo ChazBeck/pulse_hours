@@ -7,12 +7,12 @@
 
 require __DIR__ . '/../../../auth/include/auth_include.php';
 auth_init();
-auth_require_admin();
+pulse_require_admin();
 
 require_once __DIR__ . '/../../../includes/date_helpers.php';
 
 $pdo = get_db_connection();
-$user = auth_get_user();
+// $user provided by sso_include.php
 
 // Load PulseRepository
 require_once __DIR__ . '/../../../src/Repository/autoload.php';

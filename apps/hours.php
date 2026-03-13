@@ -5,13 +5,12 @@
  * Allows users to log hours worked on tasks grouped by client and project.
  */
 
-require __DIR__ . '/../auth/include/auth_include.php';
-auth_init();
-auth_require_login();
+require __DIR__ . '/../sso/sso_include.php';
+/* SSO enforced in sso_include.php */
 
 require_once __DIR__ . '/../includes/date_helpers.php';
 
-$user = auth_get_user();
+// $user provided by sso_include.php
 $pdo = get_db_connection();
 
 // Success/error messages
