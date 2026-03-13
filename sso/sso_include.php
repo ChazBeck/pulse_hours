@@ -57,8 +57,10 @@ function pulse_get_or_create_local_user() {
     // If SSO says admin, map to Admin in PulseHours.
     $role = (isset($sso['role']) && strcasecmp($sso['role'], 'admin') === 0) ? 'Admin' : 'User';
 
-    $ins = $pdo->prepare('INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, created_at) VALUES (?, NULL, ?, ?, ?, 1, NOW())');
-    $ins->execute([$sso['email'], $first, $last, $role]);
+    $ins = $pdo->prepare('INSERT INTO users (email, password_hash, first_name, last_name, role, is_active, created_at) VALUES (?, ?, ?, ?, ?, 1, NOW())');
+    $randomPw = bin2hex(random_bytes(16));
+    $pwHash = password_hash($randomPw, PASSWORD_DEFAULT);
+    $ins->execute([$sso['email'], $pwHash, $first, $last, $role]);
 
     $id = (int)$pdo->lastInsertId();
 
