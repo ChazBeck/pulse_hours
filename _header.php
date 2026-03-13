@@ -7,12 +7,8 @@
 // Load app config for url() helper
 require_once __DIR__ . '/config/app_config.php';
 
-// Get current user if authenticated
-$current_user = null;
-
-if (function_exists('auth_get_user')) {
-    $current_user = auth_get_user();
-}
+// Current user (provided by sso_include.php on protected pages)
+$current_user = isset($user) ? $user : null;
 ?>
 <header class="main-header">
     <div class="container">
@@ -27,7 +23,7 @@ if (function_exists('auth_get_user')) {
             <div class="user-menu">
                 <span class="user-name"><?= htmlspecialchars($current_user['first_name'] . ' ' . $current_user['last_name']) ?></span>
                 <span class="user-role">(<?= htmlspecialchars($current_user['role']) ?>)</span>
-                <a href="<?= url('auth/logout.php') ?>" class="btn-logout">Logout</a>
+                <a href="/auth/logout.php" class="btn-logout">Logout</a>
             </div>
             <?php endif; ?>
         </div>

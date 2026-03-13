@@ -7,10 +7,10 @@
 
 require __DIR__ . '/../../../auth/include/auth_include.php';
 auth_init();
-auth_require_admin();
+pulse_require_admin();
 
 $pdo = get_db_connection();
-$user = auth_get_user();
+// $user provided by sso_include.php
 
 ?>
 <!DOCTYPE html>

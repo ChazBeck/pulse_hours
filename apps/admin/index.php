@@ -6,11 +6,10 @@
  * including client management, user management, and system settings.
  */
 
-require __DIR__ . '/../../auth/include/auth_include.php';
-auth_init();
-auth_require_admin();
+require __DIR__ . '/../../sso/sso_include.php';
+pulse_require_admin();
 
-$user = auth_get_user();
+// $user provided by sso_include.php
 ?>
 <!DOCTYPE html>
 <html lang="en">

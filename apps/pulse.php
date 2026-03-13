@@ -6,11 +6,10 @@
  * Accessible to all logged-in users (not admin-only).
  */
 
-require __DIR__ . '/../auth/include/auth_include.php';
-auth_init();
-auth_require_login(); // Only require login, not admin
+require __DIR__ . '/../sso/sso_include.php';
+/* SSO enforced in sso_include.php */
 
-$user = auth_get_user();
+// $user provided by sso_include.php
 $pdo = get_db_connection();
 
 require_once __DIR__ . '/../includes/date_helpers.php';
