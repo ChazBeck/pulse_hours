@@ -14,26 +14,16 @@
 // ============================================================================
 
 /**
- * Database host - localhost for XAMPP local development
+ * Database host — reads DB_HOST env var (used by the Docker local stack);
+ * falls back to 'localhost' for cPanel/XAMPP-style deploys.
  */
-if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if (!defined('DB_HOST')) define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 
-/**
- * Database username - default XAMPP MySQL user
- * IMPORTANT: Change this in production for security
- */
-if (!defined('DB_USER')) define('DB_USER', 'root');
+if (!defined('DB_USER')) define('DB_USER', getenv('DB_USER') ?: 'root');
 
-/**
- * Database password - default XAMPP MySQL has no password
- * IMPORTANT: Set a strong password in production
- */
-if (!defined('DB_PASS')) define('DB_PASS', '');
+if (!defined('DB_PASS')) define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB_PASS') : '');
 
-/**
- * Database name - must match the database created in setup_database.sql
- */
-if (!defined('DB_NAME')) define('DB_NAME', 'plusehours');
+if (!defined('DB_NAME')) define('DB_NAME', getenv('DB_NAME') ?: 'plusehours');
 
 /**
  * Database charset - UTF-8 for international character support

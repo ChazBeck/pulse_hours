@@ -158,7 +158,7 @@ foreach ($clients as $client) {
                 t.status as task_status
             FROM tasks t
             WHERE t.project_id = ? AND t.status != 'completed'
-            ORDER BY t.name ASC
+            ORDER BY t.sort_order ASC, t.name ASC
         ");
         $stmt->execute([$project['project_id']]);
         $tasks = $stmt->fetchAll();
@@ -189,7 +189,7 @@ foreach ($clients as $client) {
             t.status as task_status
         FROM tasks t
         WHERE t.client_id = ? AND t.project_id IS NULL AND t.status != 'completed'
-        ORDER BY t.name ASC
+        ORDER BY t.sort_order ASC, t.name ASC
     ");
     $stmt->execute([$client['client_id']]);
     $client_level_tasks = $stmt->fetchAll();

@@ -5,7 +5,7 @@
  * Main reports landing page with links to various analytics and visualizations.
  */
 
-require __DIR__ . '/../../../auth/include/auth_include.php';
+require __DIR__ . '/../../../sso/sso_include.php';
 auth_init();
 pulse_require_admin();
 

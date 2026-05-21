@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/local/Dockerfile
+    container_name: pulse-hours-local-app
+    working_dir: /var/www/html
+    ports:
+      - "8070:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: plusehours
+      DB_USER: plusehours
+      DB_PASS: plusehours_local_pw
+      # Bypass loginveerles SSO for local dev — auto-impersonate the user below.
+      SSO_JWT_INCLUDE: /var/www/html/docker/local/jwt_local_stub.php
+      LOCAL_DEV_USER_EMAIL: charlie@veerless.com
+    volumes:
+      - /Users/Shared/data/.openclaw/workspace/apps/pulse_hours:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -lc "composer install --no-interaction --prefer-dist --no-progress && apache2-foreground"
+
+  db:
+    image: mariadb:11.4
+    container_name: pulse-hours-local-db
+    environment:
+      MARIADB_ROOT_PASSWORD: localroot
+      MARIADB_DATABASE: plusehours
+      MARIADB_USER: plusehours
+      MARIADB_PASSWORD: plusehours_local_pw
+    ports:
+      - "33062:3306"
+    volumes:
+      - pulse-hours-local-db:/var/lib/mysql
+      # First-boot import of the production dump (only runs when the data volume is empty).
+      - /Users/Shared/data/.openclaw/workspace/backups/pulse_hours/pulsehours-2026-05-21.sql:/docker-entrypoint-initdb.d/01-pulsehours.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -plocalroot --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pulse-hours-local-db:

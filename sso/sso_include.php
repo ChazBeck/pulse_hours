@@ -11,8 +11,13 @@
 require_once __DIR__ . '/../config/app_config.php';
 require_once __DIR__ . '/../config/db_config.php';
 
-// Load loginveerles JWT auth
-require_once '/var/www/sites/dev.veerless.net/auth/include/jwt_include.php';
+// Load the session-based auth helpers (CSRF token, session init, rate limiting, etc.).
+// Several admin pages call auth_csrf_token() without explicitly including this file.
+require_once __DIR__ . '/../auth/include/auth_include.php';
+
+// Load loginveerles JWT auth (SSO_JWT_INCLUDE env var lets local dev point at a stub).
+$jwt_include_path = getenv('SSO_JWT_INCLUDE') ?: '/var/www/sites/dev.veerless.net/auth/include/jwt_include.php';
+require_once $jwt_include_path;
 jwt_init();
 
 function pulse_require_login() {
