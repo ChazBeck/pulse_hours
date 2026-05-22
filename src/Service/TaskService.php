@@ -117,6 +117,53 @@ class TaskService {
         }
     }
 
+    /**
+     * Update only a task's status. Used by the inline status selector on
+     * the projects admin page.
+     */
+    public function updateStatus($taskId, $status) {
+        $taskId = (int) $taskId;
+        if ($taskId <= 0) {
+            return $this->fail('Invalid task ID.');
+        }
+        if (!$this->taskRepo->findById($taskId)) {
+            return $this->fail('Task not found.');
+        }
+
+        try {
+            $this->taskRepo->updateTask($taskId, [
+                'status' => $this->normalizeStatus($status),
+            ]);
+            return $this->ok('Task status updated successfully!');
+        } catch (Throwable $e) {
+            return $this->logAndFail('update task status', $e, 'Error updating task.');
+        }
+    }
+
+    /**
+     * Create a task scoped to a project. The project's client_id is
+     * looked up automatically so callers don't need to supply it.
+     */
+    public function createForProject($projectId, array $data) {
+        $projectId = (int) $projectId;
+        if ($projectId <= 0) {
+            return $this->fail('Invalid project ID.');
+        }
+
+        $project = $this->projectRepo->findById($projectId);
+        if (!$project) {
+            return $this->fail('Project not found.');
+        }
+
+        return $this->createTask([
+            'name'        => $data['name'] ?? '',
+            'description' => $data['description'] ?? '',
+            'project_id'  => $projectId,
+            'client_id'   => $project['client_id'],
+            'status'      => TaskStatus::NOT_STARTED,
+        ]);
+    }
+
     public function deleteTask($id) {
         $id = (int) $id;
         if ($id <= 0) {
