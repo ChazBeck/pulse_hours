@@ -11,14 +11,36 @@
 require_once __DIR__ . '/../config/app_config.php';
 require_once __DIR__ . '/../config/db_config.php';
 
-// Load the session-based auth helpers (CSRF token, session init, rate limiting, etc.).
-// Several admin pages call auth_csrf_token() without explicitly including this file.
-require_once __DIR__ . '/../auth/include/auth_include.php';
+// Do not load PulseHours' legacy auth_include.php here: loginveerles SSO also
+// defines auth_csrf_token()/auth_verify_csrf(), so loading both causes fatal
+// redeclare errors. Compatibility wrappers are defined below for pages that
+// still call auth_init()/auth_require_admin() after including this bridge.
 
 // Load loginveerles JWT auth (SSO_JWT_INCLUDE env var lets local dev point at a stub).
-$jwt_include_path = getenv('SSO_JWT_INCLUDE') ?: '/var/www/sites/dev.veerless.net/auth/include/jwt_include.php';
+$jwt_include_path = getenv('SSO_JWT_INCLUDE') ?: '/var/www/sites/apps.veerless.net/auth/include/jwt_include.php';
 require_once $jwt_include_path;
 jwt_init();
+
+// Compatibility wrappers for older PulseHours pages that still call auth_* helpers.
+// CSRF helpers come from loginveerles common_functions.php via jwt_include.php.
+if (!function_exists('auth_init')) {
+    function auth_init() { jwt_init(); }
+}
+if (!function_exists('auth_is_logged_in')) {
+    function auth_is_logged_in() { return jwt_is_logged_in(); }
+}
+if (!function_exists('auth_get_user')) {
+    function auth_get_user() { return pulse_get_or_create_local_user(); }
+}
+if (!function_exists('auth_require_login')) {
+    function auth_require_login() { pulse_require_login(); }
+}
+if (!function_exists('auth_require_admin')) {
+    function auth_require_admin() { pulse_require_admin(); }
+}
+if (!function_exists('auth_logout')) {
+    function auth_logout() { jwt_logout(); }
+}
 
 function pulse_require_login() {
     if (!jwt_is_logged_in()) {
