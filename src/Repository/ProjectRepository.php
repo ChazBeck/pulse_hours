@@ -79,13 +79,14 @@ class ProjectRepository extends BaseRepository {
      */
     public function create(array $data) {
         return $this->insert([
-            'name' => $data['name'],
-            'client_id' => $data['client_id'] ?? null,
-            'status' => $data['status'] ?? 'active',
-            'start_date' => $data['start_date'] ?? null,
-            'end_date' => $data['end_date'] ?? null,
-            'budget_hours' => $data['budget_hours'] ?? null,
-            'description' => $data['description'] ?? null
+            'name'                => $data['name'],
+            'client_id'           => $data['client_id'] ?? null,
+            'project_template_id' => $data['project_template_id'] ?? null,
+            'status'              => $data['status'] ?? 'active',
+            'active'              => array_key_exists('active', $data) ? (int) $data['active'] : 1,
+            'start_date'          => $data['start_date'] ?? null,
+            'end_date'            => $data['end_date'] ?? null,
+            'description'         => $data['description'] ?? null,
         ]);
     }
     
@@ -98,15 +99,39 @@ class ProjectRepository extends BaseRepository {
      */
     public function updateProject($id, array $data) {
         $updateData = [];
-        
-        $fields = ['name', 'client_id', 'status', 'start_date', 'end_date', 'budget_hours', 'description'];
+
+        $fields = ['name', 'client_id', 'status', 'start_date', 'end_date', 'description', 'active', 'project_template_id'];
         foreach ($fields as $field) {
-            if (isset($data[$field])) {
+            if (array_key_exists($field, $data)) {
                 $updateData[$field] = $data[$field];
             }
         }
-        
+
         return $this->update($id, $updateData);
+    }
+
+    /**
+     * Get all projects with client, template, and task aggregates for
+     * the admin projects list view.
+     */
+    public function getAllWithStats() {
+        $stmt = $this->pdo->query("
+            SELECT
+                p.*,
+                c.name AS client_name,
+                c.client_color,
+                c.client_logo,
+                pt.name AS template_name,
+                COUNT(DISTINCT t.id) AS task_count,
+                SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) AS completed_tasks
+            FROM projects p
+            INNER JOIN clients c ON p.client_id = c.id
+            LEFT JOIN project_templates pt ON p.project_template_id = pt.id
+            LEFT JOIN tasks t ON p.id = t.project_id
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        ");
+        return $stmt->fetchAll();
     }
     
     /**
@@ -153,13 +178,32 @@ class ProjectRepository extends BaseRepository {
     
     /**
      * Get active projects
-     * 
+     *
      * @return array Array of active projects
      */
     public function getActive() {
         $stmt = $this->pdo->query("
-            SELECT * FROM projects 
-            WHERE status = 'active' 
+            SELECT * FROM projects
+            WHERE status = 'active'
+            ORDER BY name ASC
+        ");
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Get projects with the `active` boolean column set, returning a
+     * minimal column set suitable for client-aware dropdowns.
+     *
+     * Note: this filter is distinct from getActive() which uses the
+     * `status` enum. The projects table currently carries both columns.
+     *
+     * @return array Array of [id, name, client_id]
+     */
+    public function getEnabledForSelect() {
+        $stmt = $this->pdo->query("
+            SELECT id, name, client_id
+            FROM projects
+            WHERE active = 1
             ORDER BY name ASC
         ");
         return $stmt->fetchAll();

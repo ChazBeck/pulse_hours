@@ -11,74 +11,130 @@ class ProjectService {
     private $projectRepo;
     private $taskRepo;
     private $clientRepo;
+    private $templateTaskRepo;
     private $pdo;
-    
+
     public function __construct($pdo = null) {
         $this->pdo = $pdo ?? get_db_connection();
         $this->projectRepo = new ProjectRepository($this->pdo);
         $this->taskRepo = new TaskRepository($this->pdo);
         $this->clientRepo = new ClientRepository($this->pdo);
+        $this->templateTaskRepo = new TaskTemplateRepository($this->pdo);
     }
-    
+
+    public function getAllWithStats() {
+        return $this->projectRepo->getAllWithStats();
+    }
+
+    public function getProjectById($id) {
+        $id = (int) $id;
+        if ($id <= 0) {
+            return null;
+        }
+        return $this->projectRepo->findById($id) ?: null;
+    }
+
+    public function getTasksForProject($projectId) {
+        return $this->taskRepo->getByProjectId((int) $projectId);
+    }
+
     /**
-     * Create a new project with validation
-     * 
-     * @param array $data Project data
-     * @return array Result with 'success', 'message', and optionally 'project_id'
+     * Create a new project, optionally instantiating tasks from a
+     * project template. Project creation and template-task creation
+     * share a transaction so a failure rolls everything back.
+     *
+     * @return array{success: bool, message: string, project_id?: int, task_count?: int}
      */
     public function createProject(array $data) {
-        try {
-            // Validate required fields
-            if (empty($data['name'])) {
-                return [
-                    'success' => false,
-                    'message' => 'Project name is required'
-                ];
-            }
-            
-            // Validate client exists if provided
-            if (!empty($data['client_id'])) {
-                $client = $this->clientRepo->findById($data['client_id']);
-                if (!$client) {
-                    return [
-                        'success' => false,
-                        'message' => 'Invalid client ID'
-                    ];
-                }
-            }
-            
-            // Validate dates
-            if (!empty($data['start_date']) && !empty($data['end_date'])) {
-                if (strtotime($data['end_date']) < strtotime($data['start_date'])) {
-                    return [
-                        'success' => false,
-                        'message' => 'End date must be after start date'
-                    ];
-                }
-            }
-            
-            $projectId = $this->projectRepo->create($data);
-            
-            if ($projectId) {
-                return [
-                    'success' => true,
-                    'message' => 'Project created successfully',
-                    'project_id' => $projectId
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'message' => 'Failed to create project'
-                ];
-            }
-            
-        } catch (Exception $e) {
-            error_log("Create project error: " . $e->getMessage());
-            return [
-                'success' => false,
-                'message' => 'An error occurred while creating the project'
-            ];
+        $error = $this->validateProjectInput($data, true);
+        if ($error) {
+            return ['success' => false, 'message' => $error];
         }
+
+        $templateId = !empty($data['project_template_id']) ? (int) $data['project_template_id'] : null;
+        $clientId = (int) $data['client_id'];
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $projectId = $this->projectRepo->create([
+                'name'                => trim($data['name']),
+                'client_id'           => $clientId,
+                'project_template_id' => $templateId,
+                'status'              => $data['status'] ?? 'active',
+                'active'              => !empty($data['active']) ? 1 : 0,
+                'start_date'          => $this->nullableDate($data['start_date'] ?? null),
+                'end_date'            => $this->nullableDate($data['end_date'] ?? null),
+                'description'         => trim($data['description'] ?? ''),
+            ]);
+
+            if (!$projectId) {
+                $this->pdo->rollBack();
+                return ['success' => false, 'message' => 'Failed to create project.'];
+            }
+
+            $taskCount = 0;
+            if ($templateId !== null) {
+                $taskCount = $this->createTasksFromTemplate($projectId, $clientId, $templateId);
+            }
+
+            $this->pdo->commit();
+
+            return [
+                'success'    => true,
+                'message'    => $taskCount > 0
+                    ? "Project created successfully with {$taskCount} tasks from template!"
+                    : 'Project created successfully!',
+                'project_id' => $projectId,
+                'task_count' => $taskCount,
+            ];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log('ProjectService::createProject failed: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error creating project.'];
+        }
+    }
+
+    private function createTasksFromTemplate($projectId, $clientId, $templateId) {
+        $templateTasks = $this->templateTaskRepo->getByProjectTemplateId($templateId);
+        foreach ($templateTasks as $tt) {
+            $this->taskRepo->create([
+                'name'        => $tt['name'],
+                'description' => $tt['description'],
+                'project_id'  => $projectId,
+                'client_id'   => $clientId,
+                'status'      => 'not-started',
+            ]);
+        }
+        return count($templateTasks);
+    }
+
+    private function validateProjectInput(array $data, $forCreate) {
+        $name = trim($data['name'] ?? '');
+        if ($name === '') {
+            return 'Project name is required.';
+        }
+
+        $clientId = (int) ($data['client_id'] ?? 0);
+        if ($clientId <= 0) {
+            return 'Please select a valid client.';
+        }
+        if (!$this->clientRepo->findById($clientId)) {
+            return 'Invalid client ID.';
+        }
+
+        if (!empty($data['start_date']) && !empty($data['end_date'])) {
+            if (strtotime($data['end_date']) < strtotime($data['start_date'])) {
+                return 'End date must be after start date.';
+            }
+        }
+        return null;
+    }
+
+    private function nullableDate($value) {
+        return empty($value) ? null : $value;
     }
     
     /**
@@ -248,8 +304,31 @@ class ProjectService {
     }
     
     /**
+     * Delete a project relying on the projects -> tasks -> hours FK
+     * cascade configured in the schema. Mirrors the existing admin
+     * page behavior where confirming the prompt removes everything.
+     */
+    public function deleteProjectCascade($projectId) {
+        $projectId = (int) $projectId;
+        if ($projectId <= 0) {
+            return ['success' => false, 'message' => 'Invalid project ID.'];
+        }
+        if (!$this->projectRepo->findById($projectId)) {
+            return ['success' => false, 'message' => 'Project not found.'];
+        }
+
+        try {
+            $this->projectRepo->delete($projectId);
+            return ['success' => true, 'message' => 'Project deleted successfully!'];
+        } catch (Throwable $e) {
+            error_log('ProjectService::deleteProjectCascade failed: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error deleting project.'];
+        }
+    }
+
+    /**
      * Create project from template
-     * 
+     *
      * @param int $templateId Template project ID
      * @param array $data New project data (name, client_id, etc.)
      * @return array Result with 'success', 'message', and optionally 'project_id'
@@ -295,7 +374,6 @@ class ProjectService {
                     'client_id' => $data['client_id'] ?? $template['client_id'],
                     'status' => 'not-started',
                     'description' => $task['description'],
-                    'estimated_hours' => $task['estimated_hours']
                 ]);
             }
             

@@ -1,103 +1,64 @@
 <?php
 /**
  * Hours Log - View and Edit All Hours
- * 
- * Admin page to view and edit all hours entries across all users.
+ *
+ * Admin page listing all hours entries across all users, with filters,
+ * inline edit modal, and delete. POST actions dispatch through HoursService.
  */
 
 require __DIR__ . '/../../sso/sso_include.php';
 pulse_require_admin();
 
-$pdo = get_db_connection();
+require_once __DIR__ . '/../../src/Service/HoursService.php';
 
-// Load repositories
-require_once __DIR__ . '/../../src/Repository/autoload.php';
-$hoursRepo = new HoursRepository($pdo);
+$service = new HoursService();
+$pdo = get_db_connection();
 $clientRepo = new ClientRepository($pdo);
 $userRepo = new UserRepository($pdo);
+$hoursRepo = new HoursRepository($pdo);
 
-// Success/error messages
-$success_message = '';
-$error_message = '';
+$successMessage = '';
+$errorMessage = '';
 
-// ============================================================================
-// Handle Edit/Delete Actions
-// ============================================================================
+// ----------------------------------------------------------------------
+// Handle POST actions
+// ----------------------------------------------------------------------
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verify CSRF token
-    $csrf_token = $_POST['csrf_token'] ?? '';
-    if (!auth_verify_csrf($csrf_token)) {
-        $error_message = 'Invalid form submission (CSRF token mismatch)';
+    if (!auth_verify_csrf($_POST['csrf_token'] ?? '')) {
+        $errorMessage = 'Invalid form submission (CSRF token mismatch).';
     } elseif (isset($_POST['delete_entry'])) {
-        try {
-            $entry_id = $_POST['entry_id'];
-            $hoursRepo->delete($entry_id);
-            $success_message = 'Entry deleted successfully';
-        } catch (Exception $e) {
-            $error_message = 'Error deleting entry: ' . $e->getMessage();
-        }
+        $result = $service->deleteEntryAsAdmin($_POST['entry_id'] ?? 0);
+        $result['success'] ? $successMessage = $result['message'] : $errorMessage = $result['message'];
     } elseif (isset($_POST['update_entry'])) {
-        try {
-            $entry_id = $_POST['entry_id'];
-            $hours = $_POST['hours'];
-            $date_worked = $_POST['date_worked'];
-            
-            // Convert empty string to 0
-            if ($hours === '' || $hours === null) {
-                $hours = 0;
-            }
-            
-            if (!is_numeric($hours) || $hours < 0) {
-                throw new Exception('Hours must be a non-negative number');
-            }
-            
-            // Calculate year_week from date_worked
-            $year_week = date('o-W', strtotime($date_worked));
-            
-            $hoursRepo->update($entry_id, [
-                'hours' => $hours,
-                'date_worked' => $date_worked,
-                'year_week' => $year_week
-            ]);
-            $success_message = 'Entry updated successfully';
-        } catch (Exception $e) {
-            $error_message = 'Error updating entry: ' . $e->getMessage();
-        }
+        $result = $service->updateEntry($_POST['entry_id'] ?? 0, $_POST);
+        $result['success'] ? $successMessage = $result['message'] : $errorMessage = $result['message'];
     }
 }
 
-// ============================================================================
-// Fetch All Hours Entries
-// ============================================================================
+// ----------------------------------------------------------------------
+// Fetch data for display
+// ----------------------------------------------------------------------
 
-$filter_user = $_GET['user'] ?? '';
-$filter_client = $_GET['client'] ?? '';
-$filter_week = $_GET['week'] ?? '';
+$filterUser = $_GET['user'] ?? '';
+$filterClient = $_GET['client'] ?? '';
+$filterWeek = $_GET['week'] ?? '';
 
-// Build filters array for repository
 $filters = [];
-if ($filter_user) {
-    $filters['user_id'] = $filter_user;
-}
-if ($filter_client) {
-    $filters['client_id'] = $filter_client;
-}
-if ($filter_week) {
-    $filters['year_week'] = $filter_week;
-}
+if ($filterUser !== '')   $filters['user_id']   = $filterUser;
+if ($filterClient !== '') $filters['client_id'] = $filterClient;
+if ($filterWeek !== '')   $filters['year_week'] = $filterWeek;
 
-// Use repository to fetch hours with all details
-$hours_entries = $hoursRepo->getAllWithDetails($filters);
-
-// Get filter options using repositories
+$hoursEntries = $hoursRepo->getAllWithDetails($filters);
 $users = $userRepo->getActive();
 $clients = $clientRepo->getActive();
+$weeks = $hoursRepo->getDistinctWeeks(20);
 
-// Get distinct weeks using repository
-$weeks_array = $hoursRepo->getDistinctWeeks(20);
-$weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
+$totalHours = array_sum(array_column($hoursEntries, 'hours'));
+$totalEntries = count($hoursEntries);
+$uniqueUsers = count(array_unique(array_column($hoursEntries, 'email')));
 
+$csrfToken = auth_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -108,260 +69,37 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
     <?php include __DIR__ . '/../../includes/head.php'; ?>
     <link rel="stylesheet" href="<?= url('/assets/admin-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('/assets/admin-nav-styles.css') ?>">
-    <style>
-        .filters {
-            background: white;
-            padding: 1.5rem;
-            border-radius: var(--border-radius);
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .filters form {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: end;
-        }
-
-        .filter-group {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .filter-group label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-
-        .filter-group select {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid var(--gray-300);
-            border-radius: var(--border-radius);
-            font-size: 0.875rem;
-        }
-
-        .filter-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .hours-table {
-            background: white;
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        thead {
-            background: var(--gray-100);
-        }
-
-        th {
-            padding: 1rem;
-            text-align: left;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            border-bottom: 2px solid var(--gray-200);
-        }
-
-        td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--gray-200);
-            font-size: 0.875rem;
-        }
-
-        tbody tr:hover {
-            background: var(--gray-50);
-        }
-
-        .user-cell {
-            font-weight: 600;
-        }
-
-        .client-cell {
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-
-        .hours-cell {
-            font-weight: 700;
-            color: var(--primary-color);
-            text-align: right;
-        }
-
-        .date-cell {
-            white-space: nowrap;
-        }
-
-        .actions-cell {
-            text-align: right;
-            white-space: nowrap;
-        }
-
-        .btn-edit,
-        .btn-delete {
-            padding: 0.25rem 0.75rem;
-            font-size: 0.75rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-edit {
-            background: var(--primary-color);
-            color: white;
-        }
-
-        .btn-edit:hover {
-            background: #d17520;
-        }
-
-        .btn-delete {
-            background: var(--danger-color);
-            color: white;
-            margin-left: 0.5rem;
-        }
-
-        .btn-delete:hover {
-            background: #dc2626;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--text-secondary);
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: var(--border-radius);
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .modal-content h3 {
-            margin-bottom: 1.5rem;
-            color: var(--text-primary);
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid var(--gray-300);
-            border-radius: var(--border-radius);
-            font-size: 0.875rem;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 0.5rem;
-            justify-content: flex-end;
-            margin-top: 1.5rem;
-        }
-
-        .summary-stats {
-            background: white;
-            padding: 1.5rem;
-            border-radius: var(--border-radius);
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-sm);
-            display: flex;
-            gap: 2rem;
-            justify-content: space-around;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        .stat-label {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-    </style>
+    <link rel="stylesheet" href="<?= url('/assets/hours-log.css') ?>">
 </head>
 <body>
     <?php include __DIR__ . '/../../_header.php'; ?>
     <?php include __DIR__ . '/_admin_nav.php'; ?>
-    
+
     <main class="admin-content">
         <div class="admin-header">
             <h1>Hours Log</h1>
         </div>
 
-        <?php if ($success_message): ?>
-            <div class="alert alert-success"><?= htmlspecialchars($success_message) ?></div>
+        <?php if ($successMessage): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($successMessage) ?></div>
         <?php endif; ?>
 
-        <?php if ($error_message): ?>
-            <div class="alert alert-danger"><?= htmlspecialchars($error_message) ?></div>
+        <?php if ($errorMessage): ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($errorMessage) ?></div>
         <?php endif; ?>
 
         <!-- Summary Stats -->
-        <?php
-        $total_hours = array_sum(array_column($hours_entries, 'hours'));
-        $total_entries = count($hours_entries);
-        $unique_users = count(array_unique(array_column($hours_entries, 'email')));
-        ?>
         <div class="summary-stats">
             <div class="stat-item">
-                <div class="stat-value"><?= number_format($total_hours, 2) ?></div>
+                <div class="stat-value"><?= number_format($totalHours, 2) ?></div>
                 <div class="stat-label">Total Hours</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value"><?= $total_entries ?></div>
+                <div class="stat-value"><?= $totalEntries ?></div>
                 <div class="stat-label">Entries</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value"><?= $unique_users ?></div>
+                <div class="stat-value"><?= $uniqueUsers ?></div>
                 <div class="stat-label">Team Members</div>
             </div>
         </div>
@@ -374,7 +112,7 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
                     <select name="user">
                         <option value="">All Users</option>
                         <?php foreach ($users as $u): ?>
-                            <option value="<?= $u['id'] ?>" <?= ($filter_user == $u['id']) ? 'selected' : '' ?>>
+                            <option value="<?= (int) $u['id'] ?>" <?= ($filterUser == $u['id']) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($u['first_name'] . ' ' . $u['last_name']) ?>
                             </option>
                         <?php endforeach; ?>
@@ -386,7 +124,7 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
                     <select name="client">
                         <option value="">All Clients</option>
                         <?php foreach ($clients as $c): ?>
-                            <option value="<?= $c['id'] ?>" <?= ($filter_client == $c['id']) ? 'selected' : '' ?>>
+                            <option value="<?= (int) $c['id'] ?>" <?= ($filterClient == $c['id']) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($c['name']) ?>
                             </option>
                         <?php endforeach; ?>
@@ -398,8 +136,8 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
                     <select name="week">
                         <option value="">All Weeks</option>
                         <?php foreach ($weeks as $w): ?>
-                            <option value="<?= $w['year_week'] ?>" <?= ($filter_week == $w['year_week']) ? 'selected' : '' ?>>
-                                <?= $w['year_week'] ?>
+                            <option value="<?= htmlspecialchars($w) ?>" <?= ($filterWeek === $w) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($w) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -414,7 +152,7 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
 
         <!-- Hours Table -->
         <div class="hours-table">
-            <?php if (empty($hours_entries)): ?>
+            <?php if (empty($hoursEntries)): ?>
                 <div class="empty-state">
                     <p>No hours entries found.</p>
                 </div>
@@ -433,18 +171,26 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($hours_entries as $entry): ?>
+                        <?php foreach ($hoursEntries as $entry): ?>
                             <tr>
                                 <td class="date-cell"><?= date('M j, Y', strtotime($entry['date_worked'])) ?></td>
                                 <td class="user-cell"><?= htmlspecialchars($entry['first_name'] . ' ' . $entry['last_name']) ?></td>
                                 <td class="client-cell"><?= htmlspecialchars($entry['client_name']) ?></td>
-                                <td><?= $entry['project_name'] ? htmlspecialchars($entry['project_name']) : '<em>No Project</em>' ?></td>
+                                <td>
+                                    <?php if ($entry['project_name']): ?>
+                                        <?= htmlspecialchars($entry['project_name']) ?>
+                                    <?php else: ?>
+                                        <em class="no-project">No Project</em>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= htmlspecialchars($entry['task_name']) ?></td>
                                 <td class="hours-cell"><?= number_format($entry['hours'], 2) ?>h</td>
                                 <td><?= htmlspecialchars($entry['year_week']) ?></td>
                                 <td class="actions-cell">
-                                    <button class="btn-edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($entry)) ?>)">Edit</button>
-                                    <button class="btn-delete" onclick="confirmDelete(<?= $entry['id'] ?>)">Delete</button>
+                                    <button type="button" class="btn-edit"
+                                            data-edit-entry='<?= htmlspecialchars(json_encode($entry), ENT_QUOTES) ?>'>Edit</button>
+                                    <button type="button" class="btn-delete"
+                                            data-delete-entry="<?= (int) $entry['id'] ?>">Delete</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -459,24 +205,22 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
         <div class="modal-content">
             <h3>Edit Hours Entry</h3>
             <form method="POST" action="" id="editForm">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES) ?>">
                 <input type="hidden" name="entry_id" id="edit_entry_id">
-                
+
                 <div class="form-group">
                     <label>Date Worked</label>
                     <input type="date" name="date_worked" id="edit_date_worked" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Hours</label>
                     <input type="number" name="hours" id="edit_hours" step="0.25" min="0" max="75" value="0">
-                    <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
-                        Can be set to 0 if needed
-                    </small>
+                    <small class="field-hint">Can be set to 0 if needed</small>
                 </div>
-                
+
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-action="close-edit-modal">Cancel</button>
                     <button type="submit" name="update_entry" class="btn btn-primary">Update</button>
                 </div>
             </form>
@@ -485,46 +229,11 @@ $weeks = array_map(function($w) { return ['year_week' => $w]; }, $weeks_array);
 
     <!-- Delete Form -->
     <form id="deleteForm" method="POST" action="" style="display: none;">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES) ?>">
         <input type="hidden" name="entry_id" id="delete_entry_id">
         <input type="hidden" name="delete_entry" value="1">
     </form>
 
-    <script>
-        function openEditModal(entry) {
-            document.getElementById('edit_entry_id').value = entry.id;
-            document.getElementById('edit_date_worked').value = entry.date_worked;
-            document.getElementById('edit_hours').value = entry.hours;
-            document.getElementById('editModal').classList.add('active');
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('active');
-        }
-
-        function confirmDelete(entryId) {
-            if (confirm('Are you sure you want to delete this entry? This cannot be undone.')) {
-                document.getElementById('delete_entry_id').value = entryId;
-                document.getElementById('deleteForm').submit();
-            }
-        }
-
-        // Close modal when clicking outside
-        document.getElementById('editModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeEditModal();
-            }
-        });
-
-        // Disable scroll on number inputs
-        document.addEventListener('DOMContentLoaded', function() {
-            const numberInputs = document.querySelectorAll('input[type="number"]');
-            numberInputs.forEach(input => {
-                input.addEventListener('wheel', function(e) {
-                    e.preventDefault();
-                });
-            });
-        });
-    </script>
+    <script src="<?= url('/assets/hours-log.js') ?>"></script>
 </body>
 </html>

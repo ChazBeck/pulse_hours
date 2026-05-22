@@ -12,20 +12,63 @@ class TaskRepository extends BaseRepository {
     
     /**
      * Get all tasks with project and client information
-     * 
+     *
      * @return array Array of task records with related data
      */
     public function getAllWithRelations() {
         $stmt = $this->pdo->query("
-            SELECT t.*, 
-                   p.name as project_name, 
+            SELECT t.*,
+                   p.name as project_name,
                    c.name as client_name,
-                   c.id as client_id
+                   c.id as client_id,
+                   c.client_color
             FROM tasks t
+            INNER JOIN clients c ON t.client_id = c.id
             LEFT JOIN projects p ON t.project_id = p.id
-            LEFT JOIN clients c ON t.client_id = c.id
-            ORDER BY c.name ASC, p.name ASC, t.name ASC
+            ORDER BY t.created_at DESC
         ");
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Get tasks with relations, optionally filtered by client, project, and status.
+     * Used by the grouped tasks-view page. Columns are aliased with a `task_`
+     * prefix where they would otherwise collide with project/client columns.
+     *
+     * @param array $filters Keys: client_id, project_id, status (each optional)
+     * @return array
+     */
+    public function getFilteredWithRelations(array $filters = []) {
+        require_once __DIR__ . '/../../includes/FilterBuilder.php';
+
+        $builder = new FilterBuilder();
+        $builder
+            ->addFilter('c.id = ?', $filters['client_id'] ?? '')
+            ->addFilter('p.id = ?', $filters['project_id'] ?? '')
+            ->addFilter('t.status = ?', $filters['status'] ?? '');
+
+        $sql = "
+            SELECT
+                c.id as client_id,
+                c.name as client_name,
+                c.client_color,
+                p.id as project_id,
+                p.name as project_name,
+                p.status as project_status,
+                t.id as task_id,
+                t.name as task_name,
+                t.status as task_status,
+                t.description as task_description,
+                t.created_at as task_created
+            FROM tasks t
+            INNER JOIN clients c ON t.client_id = c.id
+            LEFT JOIN projects p ON t.project_id = p.id
+            {$builder->buildWhere()}
+            ORDER BY c.name ASC, p.name ASC, t.name ASC
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($builder->getParams());
         return $stmt->fetchAll();
     }
     
@@ -90,12 +133,11 @@ class TaskRepository extends BaseRepository {
      */
     public function create(array $data) {
         return $this->insert([
-            'name' => $data['name'],
-            'project_id' => $data['project_id'] ?? null,
-            'client_id' => $data['client_id'] ?? null,
-            'status' => $data['status'] ?? 'not-started',
+            'name'        => $data['name'],
+            'project_id'  => $data['project_id'] ?? null,
+            'client_id'   => $data['client_id'] ?? null,
+            'status'      => $data['status'] ?? 'not-started',
             'description' => $data['description'] ?? null,
-            'estimated_hours' => $data['estimated_hours'] ?? null
         ]);
     }
     
@@ -109,7 +151,7 @@ class TaskRepository extends BaseRepository {
     public function updateTask($id, array $data) {
         $updateData = [];
         
-        $fields = ['name', 'project_id', 'client_id', 'status', 'description', 'estimated_hours'];
+        $fields = ['name', 'project_id', 'client_id', 'status', 'description'];
         foreach ($fields as $field) {
             if (isset($data[$field])) {
                 $updateData[$field] = $data[$field];

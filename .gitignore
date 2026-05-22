@@ -46,6 +46,9 @@ Temporary Items
 vendor/
 composer.lock
 
+# PHPUnit cache
+.phpunit.result.cache
+
 # Environment files
 .env
 .env.local

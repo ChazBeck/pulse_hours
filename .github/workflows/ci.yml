@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }} / MariaDB
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.4']
+
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: rootpw
+          MARIADB_DATABASE: plusehours_test
+          MARIADB_USER: plusehours
+          MARIADB_PASSWORD: plusehours_local_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -uroot -prootpw --silent"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, gd, zip
+          coverage: none
+          tools: composer
+
+      - name: Composer install
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Verify MariaDB reachable via PDO
+        run: |
+          php -r '
+            for ($i = 0; $i < 30; $i++) {
+              try {
+                new PDO("mysql:host=127.0.0.1;port=3306;dbname=plusehours_test",
+                  "plusehours", "plusehours_local_pw");
+                echo "MariaDB ready after " . $i . "s\n";
+                exit(0);
+              } catch (PDOException $e) {
+                sleep(1);
+              }
+            }
+            fwrite(STDERR, "MariaDB never reachable\n");
+            exit(1);
+          '
+
+      - name: Lint every PHP file
+        run: |
+          set -e
+          find apps src includes config auth sso database tests -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l > /tmp/lint.log
+          # `php -l` exits non-zero on parse errors, but xargs -P swallows that;
+          # double-check by greping the log for failures.
+          if grep -v 'No syntax errors' /tmp/lint.log; then
+            echo "Syntax errors found"
+            exit 1
+          fi
+          echo "All files parsed OK ($(wc -l </tmp/lint.log) files)"
+
+      - name: Run test suite
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: plusehours_test
+          DB_USER: plusehours
+          DB_PASS: plusehours_local_pw
+        run: vendor/bin/phpunit --testdox

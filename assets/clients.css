@@ -1,0 +1,22 @@
+/* Clients admin page (apps/admin/clients.php) */
+
+.field-hint {
+    display: block;
+    margin-top: 0.25rem;
+    color: #6b7280;
+}
+
+.client-logo-current {
+    margin-top: 0.5rem;
+}
+
+.client-logo-current img {
+    max-width: 100px;
+    margin-top: 0.5rem;
+    border: 1px solid #e5e7eb;
+    padding: 0.5rem;
+}
+
+.text-muted {
+    color: #9ca3af;
+}

@@ -1,0 +1,16 @@
+/* Users admin page (apps/admin/users.php) */
+
+.field-hint {
+    display: block;
+    margin-top: 0.25rem;
+    color: #6b7280;
+}
+
+.text-muted {
+    color: #9ca3af;
+    font-size: 0.875rem;
+}
+
+.text-never {
+    color: #9ca3af;
+}

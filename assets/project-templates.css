@@ -1,0 +1,258 @@
+/* Project Templates admin page */
+
+.template-section {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.template-header {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, #055666 100%);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.template-header:hover {
+    background: linear-gradient(135deg, #055666 0%, var(--primary-dark) 100%);
+}
+
+.template-header.inactive {
+    background: linear-gradient(135deg, var(--gray-400) 0%, var(--gray-500) 100%);
+}
+
+.template-info {
+    flex: 1;
+}
+
+.template-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.template-name .badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.template-name .badge.badge-muted {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.template-description {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-top: 0.25rem;
+}
+
+.template-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.template-content {
+    padding: 1.5rem;
+    display: none;
+}
+
+.template-content.active {
+    display: block;
+}
+
+.tasks-list {
+    margin-bottom: 1.5rem;
+}
+
+.task-item {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.task-item:hover {
+    background: var(--gray-100);
+    box-shadow: var(--shadow-sm);
+}
+
+.task-order {
+    background: var(--primary-color);
+    color: white;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.task-info {
+    flex: 1;
+}
+
+.task-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.task-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.task-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.btn-reorder {
+    background: var(--gray-200);
+    border: none;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-reorder:hover {
+    background: var(--gray-300);
+}
+
+.btn-reorder:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.add-task-form {
+    background: linear-gradient(135deg, #FFF5E6 0%, #FFE9CC 100%);
+    border: 2px dashed var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+}
+
+.form-section {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.form-section h2 {
+    color: var(--primary-dark);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-secondary);
+}
+
+.empty-state svg {
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.btn-icon {
+    padding: 0.5rem 0.75rem;
+    min-width: auto;
+}
+
+.toggle-icon {
+    margin-left: 0.5rem;
+    font-size: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.toggle-icon.active {
+    transform: rotate(180deg);
+}
+
+.no-tasks {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.page-intro {
+    margin-bottom: 2rem;
+}
+
+.page-intro h1 {
+    color: var(--primary-dark);
+    margin-bottom: 0.5rem;
+}
+
+.page-intro p {
+    color: var(--text-secondary);
+}
+
+.section-heading {
+    margin-bottom: 1rem;
+    color: var(--primary-dark);
+}
+
+.template-container {
+    max-width: 1200px;
+    padding: 2rem 1rem;
+}
+
+.message-spaced {
+    margin-bottom: 2rem;
+}
+
+.add-task-heading {
+    margin-bottom: 1rem;
+    color: var(--primary-dark);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    margin-top: 1.85rem;
+}
+
+.checkbox-inline {
+    width: auto;
+    margin: 0;
+}
+
+.btn-plus-icon {
+    font-size: 1.2rem;
+}
