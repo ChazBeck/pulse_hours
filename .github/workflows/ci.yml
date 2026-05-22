@@ -42,20 +42,25 @@ jobs:
           coverage: none
           tools: composer
 
-      - name: Wait for MariaDB
-        run: |
-          for i in $(seq 1 30); do
-            if mariadb -uplusehours -pplusehours_local_pw -h127.0.0.1 -e "SELECT 1" plusehours_test >/dev/null 2>&1; then
-              echo "MariaDB ready"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "MariaDB never came up"
-          exit 1
-
       - name: Composer install
         run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Verify MariaDB reachable via PDO
+        run: |
+          php -r '
+            for ($i = 0; $i < 30; $i++) {
+              try {
+                new PDO("mysql:host=127.0.0.1;port=3306;dbname=plusehours_test",
+                  "plusehours", "plusehours_local_pw");
+                echo "MariaDB ready after " . $i . "s\n";
+                exit(0);
+              } catch (PDOException $e) {
+                sleep(1);
+              }
+            }
+            fwrite(STDERR, "MariaDB never reachable\n");
+            exit(1);
+          '
 
       - name: Lint every PHP file
         run: |
