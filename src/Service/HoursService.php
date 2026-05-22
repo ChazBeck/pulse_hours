@@ -11,13 +11,196 @@ class HoursService {
     private $hoursRepo;
     private $taskRepo;
     private $userRepo;
+    private $pulseRepo;
     private $pdo;
-    
+
     public function __construct($pdo = null) {
         $this->pdo = $pdo ?? get_db_connection();
         $this->hoursRepo = new HoursRepository($this->pdo);
         $this->taskRepo = new TaskRepository($this->pdo);
         $this->userRepo = new UserRepository($this->pdo);
+        $this->pulseRepo = new PulseRepository($this->pdo);
+    }
+
+    /**
+     * Fetch the year_week from a user's most recently submitted pulse,
+     * ordered by submission timestamp. Returns null if the user has
+     * never submitted one.
+     */
+    public function getCurrentYearWeekForUser($userId) {
+        $stmt = $this->pdo->prepare(
+            "SELECT year_week FROM pulse
+             WHERE user_id = ?
+             ORDER BY date_created DESC
+             LIMIT 1"
+        );
+        $stmt->execute([(int) $userId]);
+        $row = $stmt->fetch();
+        return $row ? $row['year_week'] : null;
+    }
+
+    /**
+     * Build the nested client -> project -> task structure used by
+     * the user-facing hours entry form, including any existing hours
+     * already logged for the supplied week.
+     *
+     * @return array<int, array> Client rows with nested projects and
+     *   client-level tasks. Only clients with at least one active,
+     *   non-completed task are included.
+     */
+    public function getEntryFormData($userId, $yearWeek) {
+        $userId = (int) $userId;
+        $clientStmt = $this->pdo->query("
+            SELECT c.id as client_id, c.name as client_name, c.client_logo
+            FROM clients c
+            WHERE c.active = 1
+            ORDER BY c.name ASC
+        ");
+        $clients = $clientStmt->fetchAll();
+
+        $projectStmt = $this->pdo->prepare("
+            SELECT p.id as project_id, p.name as project_name, p.active as project_active
+            FROM projects p
+            WHERE p.client_id = ? AND p.active = 1
+            ORDER BY p.name ASC
+        ");
+        $projectTasksStmt = $this->pdo->prepare("
+            SELECT t.id as task_id, t.name as task_name, t.status as task_status
+            FROM tasks t
+            WHERE t.project_id = ? AND t.status != 'completed'
+            ORDER BY t.sort_order ASC, t.name ASC
+        ");
+        $clientTasksStmt = $this->pdo->prepare("
+            SELECT t.id as task_id, t.name as task_name, t.status as task_status
+            FROM tasks t
+            WHERE t.client_id = ? AND t.project_id IS NULL AND t.status != 'completed'
+            ORDER BY t.sort_order ASC, t.name ASC
+        ");
+        $hoursStmt = $this->pdo->prepare("
+            SELECT date_worked, hours
+            FROM hours
+            WHERE user_id = ? AND task_id = ? AND year_week = ?
+            ORDER BY date_worked DESC
+        ");
+
+        $clientData = [];
+        foreach ($clients as $client) {
+            $clientId = $client['client_id'];
+
+            $projectStmt->execute([$clientId]);
+            $projects = $projectStmt->fetchAll();
+
+            $clientProjects = [];
+            foreach ($projects as $project) {
+                $projectTasksStmt->execute([$project['project_id']]);
+                $tasks = $projectTasksStmt->fetchAll();
+
+                foreach ($tasks as &$task) {
+                    $hoursStmt->execute([$userId, $task['task_id'], $yearWeek]);
+                    $task['existing_hours'] = $hoursStmt->fetchAll();
+                }
+                unset($task);
+
+                $project['tasks'] = $tasks;
+                $clientProjects[] = $project;
+            }
+
+            $clientTasksStmt->execute([$clientId]);
+            $clientLevelTasks = $clientTasksStmt->fetchAll();
+            foreach ($clientLevelTasks as &$task) {
+                $hoursStmt->execute([$userId, $task['task_id'], $yearWeek]);
+                $task['existing_hours'] = $hoursStmt->fetchAll();
+            }
+            unset($task);
+
+            $hasTasks = !empty($clientLevelTasks);
+            foreach ($clientProjects as $p) {
+                if (!empty($p['tasks'])) {
+                    $hasTasks = true;
+                    break;
+                }
+            }
+
+            if ($hasTasks) {
+                $client['projects'] = $clientProjects;
+                $client['client_tasks'] = $clientLevelTasks;
+                $clientData[] = $client;
+            }
+        }
+
+        return $clientData;
+    }
+
+    /**
+     * Upsert today's hours for a user across a set of task ids.
+     * Skips zero or empty entries. All writes share a transaction so
+     * a validation failure rolls everything back.
+     *
+     * @param array<int, mixed> $hoursByTaskId Map of task_id => hours string
+     */
+    public function submitTodayHours($userId, $yearWeek, array $hoursByTaskId) {
+        $userId = (int) $userId;
+        $yearWeek = (string) $yearWeek;
+        $dateWorked = date('Y-m-d');
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $taskStmt = $this->pdo->prepare("SELECT project_id FROM tasks WHERE id = ?");
+            $existingStmt = $this->pdo->prepare(
+                "SELECT id FROM hours WHERE user_id = ? AND task_id = ? AND date_worked = ?"
+            );
+            $updateStmt = $this->pdo->prepare(
+                "UPDATE hours SET hours = ?, year_week = ? WHERE id = ?"
+            );
+            $insertStmt = $this->pdo->prepare(
+                "INSERT INTO hours (user_id, project_id, task_id, date_worked, year_week, hours)
+                 VALUES (?, ?, ?, ?, ?, ?)"
+            );
+
+            foreach ($hoursByTaskId as $taskId => $rawHours) {
+                $rawHours = trim((string) $rawHours);
+                if ($rawHours === '' || $rawHours === '0' || $rawHours === '0.00') {
+                    continue;
+                }
+                if (!is_numeric($rawHours) || (float) $rawHours <= 0) {
+                    $this->pdo->rollBack();
+                    return ['success' => false, 'message' => 'Hours must be a positive number.'];
+                }
+
+                $taskStmt->execute([(int) $taskId]);
+                $task = $taskStmt->fetch();
+                if (!$task) {
+                    $this->pdo->rollBack();
+                    return ['success' => false, 'message' => 'Invalid task ID: ' . (int) $taskId];
+                }
+
+                $existingStmt->execute([$userId, (int) $taskId, $dateWorked]);
+                $existing = $existingStmt->fetch();
+
+                if ($existing) {
+                    $updateStmt->execute([$rawHours, $yearWeek, $existing['id']]);
+                } else {
+                    $insertStmt->execute([
+                        $userId,
+                        $task['project_id'],
+                        (int) $taskId,
+                        $dateWorked,
+                        $yearWeek,
+                        $rawHours,
+                    ]);
+                }
+            }
+
+            $this->pdo->commit();
+            return ['success' => true, 'message' => 'Hours saved.'];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log('HoursService::submitTodayHours failed: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error saving hours.'];
+        }
     }
     
     /**
