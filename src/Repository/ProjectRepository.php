@@ -153,13 +153,32 @@ class ProjectRepository extends BaseRepository {
     
     /**
      * Get active projects
-     * 
+     *
      * @return array Array of active projects
      */
     public function getActive() {
         $stmt = $this->pdo->query("
-            SELECT * FROM projects 
-            WHERE status = 'active' 
+            SELECT * FROM projects
+            WHERE status = 'active'
+            ORDER BY name ASC
+        ");
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Get projects with the `active` boolean column set, returning a
+     * minimal column set suitable for client-aware dropdowns.
+     *
+     * Note: this filter is distinct from getActive() which uses the
+     * `status` enum. The projects table currently carries both columns.
+     *
+     * @return array Array of [id, name, client_id]
+     */
+    public function getEnabledForSelect() {
+        $stmt = $this->pdo->query("
+            SELECT id, name, client_id
+            FROM projects
+            WHERE active = 1
             ORDER BY name ASC
         ");
         return $stmt->fetchAll();
