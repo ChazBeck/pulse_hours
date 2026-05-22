@@ -86,7 +86,6 @@ class ProjectRepository extends BaseRepository {
             'active'              => array_key_exists('active', $data) ? (int) $data['active'] : 1,
             'start_date'          => $data['start_date'] ?? null,
             'end_date'            => $data['end_date'] ?? null,
-            'budget_hours'        => $data['budget_hours'] ?? null,
             'description'         => $data['description'] ?? null,
         ]);
     }
@@ -101,7 +100,7 @@ class ProjectRepository extends BaseRepository {
     public function updateProject($id, array $data) {
         $updateData = [];
 
-        $fields = ['name', 'client_id', 'status', 'start_date', 'end_date', 'budget_hours', 'description', 'active', 'project_template_id'];
+        $fields = ['name', 'client_id', 'status', 'start_date', 'end_date', 'description', 'active', 'project_template_id'];
         foreach ($fields as $field) {
             if (array_key_exists($field, $data)) {
                 $updateData[$field] = $data[$field];

@@ -374,7 +374,6 @@ class ProjectService {
                     'client_id' => $data['client_id'] ?? $template['client_id'],
                     'status' => 'not-started',
                     'description' => $task['description'],
-                    'estimated_hours' => $task['estimated_hours']
                 ]);
             }
             

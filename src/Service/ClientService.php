@@ -51,7 +51,7 @@ class ClientService {
      * Create a client. If $logoFile is a $_FILES entry it is uploaded
      * and the resulting relative path is stored on the client.
      */
-    public function createClient(array $data, array $logoFile = null) {
+    public function createClient(array $data, ?array $logoFile = null) {
         $name = trim($data['name'] ?? '');
         if ($name === '') {
             return $this->fail('Client name is required.');
@@ -92,7 +92,7 @@ class ClientService {
         }
     }
 
-    public function updateClient($id, array $data, array $logoFile = null) {
+    public function updateClient($id, array $data, ?array $logoFile = null) {
         $id = (int) $id;
         if ($id <= 0) {
             return $this->fail('Invalid client ID.');

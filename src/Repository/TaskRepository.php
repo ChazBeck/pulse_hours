@@ -133,12 +133,11 @@ class TaskRepository extends BaseRepository {
      */
     public function create(array $data) {
         return $this->insert([
-            'name' => $data['name'],
-            'project_id' => $data['project_id'] ?? null,
-            'client_id' => $data['client_id'] ?? null,
-            'status' => $data['status'] ?? 'not-started',
+            'name'        => $data['name'],
+            'project_id'  => $data['project_id'] ?? null,
+            'client_id'   => $data['client_id'] ?? null,
+            'status'      => $data['status'] ?? 'not-started',
             'description' => $data['description'] ?? null,
-            'estimated_hours' => $data['estimated_hours'] ?? null
         ]);
     }
     
@@ -152,7 +151,7 @@ class TaskRepository extends BaseRepository {
     public function updateTask($id, array $data) {
         $updateData = [];
         
-        $fields = ['name', 'project_id', 'client_id', 'status', 'description', 'estimated_hours'];
+        $fields = ['name', 'project_id', 'client_id', 'status', 'description'];
         foreach ($fields as $field) {
             if (isset($data[$field])) {
                 $updateData[$field] = $data[$field];
