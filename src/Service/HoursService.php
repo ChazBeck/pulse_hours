@@ -164,8 +164,67 @@ class HoursService {
     }
     
     /**
+     * Update a single hours entry. The year_week is derived from the
+     * supplied date_worked so it stays consistent with the date.
+     */
+    public function updateEntry($id, array $data) {
+        $id = (int) $id;
+        if ($id <= 0) {
+            return ['success' => false, 'message' => 'Invalid entry ID.'];
+        }
+
+        $rawHours = $data['hours'] ?? '';
+        if ($rawHours === '' || $rawHours === null) {
+            $hours = 0.0;
+        } elseif (!is_numeric($rawHours)) {
+            return ['success' => false, 'message' => 'Hours must be a number.'];
+        } else {
+            $hours = (float) $rawHours;
+        }
+
+        if ($hours < 0) {
+            return ['success' => false, 'message' => 'Hours must be non-negative.'];
+        }
+
+        $dateWorked = $data['date_worked'] ?? '';
+        $ts = strtotime($dateWorked);
+        if (!$ts) {
+            return ['success' => false, 'message' => 'Invalid date.'];
+        }
+
+        try {
+            $this->hoursRepo->update($id, [
+                'hours'       => $hours,
+                'date_worked' => $dateWorked,
+                'year_week'   => date('o-W', $ts),
+            ]);
+            return ['success' => true, 'message' => 'Entry updated successfully.'];
+        } catch (Throwable $e) {
+            error_log('HoursService::updateEntry failed: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error updating entry.'];
+        }
+    }
+
+    /**
+     * Admin-only delete that skips the per-user ownership check.
+     */
+    public function deleteEntryAsAdmin($id) {
+        $id = (int) $id;
+        if ($id <= 0) {
+            return ['success' => false, 'message' => 'Invalid entry ID.'];
+        }
+        try {
+            $this->hoursRepo->delete($id);
+            return ['success' => true, 'message' => 'Entry deleted successfully.'];
+        } catch (Throwable $e) {
+            error_log('HoursService::deleteEntryAsAdmin failed: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error deleting entry.'];
+        }
+    }
+
+    /**
      * Delete hours entry with ownership check
-     * 
+     *
      * @param int $hoursId Hours ID
      * @param int $userId User ID (for ownership check)
      * @param bool $isAdmin Whether user is admin
