@@ -44,38 +44,34 @@ class ClientRepository extends BaseRepository {
     
     /**
      * Create a new client
-     * 
-     * @param array $data Client data (name, logo_path, active)
+     *
+     * @param array $data Client data (name, client_color, client_logo, active)
      * @return int|false Client ID or false on failure
      */
     public function create(array $data) {
         return $this->insert([
-            'name' => $data['name'],
-            'logo_path' => $data['logo_path'] ?? null,
-            'active' => $data['active'] ?? 1
+            'name'         => $data['name'],
+            'client_color' => $data['client_color'] ?? null,
+            'client_logo'  => $data['client_logo'] ?? null,
+            'active'       => array_key_exists('active', $data) ? (int) $data['active'] : 1,
         ]);
     }
-    
+
     /**
-     * Update client information
-     * 
-     * @param int $id Client ID
-     * @param array $data Client data to update
-     * @return bool Success status
+     * Update client information. Only whitelisted fields are persisted.
      */
     public function updateClient($id, array $data) {
         $updateData = [];
-        
-        if (isset($data['name'])) {
-            $updateData['name'] = $data['name'];
+
+        foreach (['name', 'client_color', 'client_logo', 'active'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $updateData[$field] = $data[$field];
+            }
         }
-        if (isset($data['logo_path'])) {
-            $updateData['logo_path'] = $data['logo_path'];
+
+        if (empty($updateData)) {
+            return false;
         }
-        if (isset($data['active'])) {
-            $updateData['active'] = $data['active'];
-        }
-        
         return $this->update($id, $updateData);
     }
     
