@@ -1,5 +1,0 @@
-# Deny all web access to log files
-# Protects error logs from public viewing
-
-Order Deny,Allow
-Deny from all
