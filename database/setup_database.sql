@@ -171,9 +171,11 @@ CREATE TABLE IF NOT EXISTS `tasks` (
     `name` VARCHAR(255) NOT NULL,
     `description` TEXT NULL,
     `status` ENUM('not-started', 'in-progress', 'completed', 'blocked') NOT NULL DEFAULT 'not-started',
+    `estimated_hours` DECIMAL(6,2) NULL DEFAULT NULL,
+    `estimated_hours_marcy` DECIMAL(6,2) NULL DEFAULT NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     INDEX `idx_client_id` (`client_id`),
     INDEX `idx_project_id` (`project_id`),
     INDEX `idx_status` (`status`),

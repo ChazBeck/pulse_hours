@@ -18,6 +18,9 @@
         <a href="<?= url('/apps/admin/tasks.php') ?>" class="admin-nav-link <?= basename($_SERVER['PHP_SELF']) == 'tasks.php' ? 'active' : '' ?>">
             Tasks
         </a>
+        <a href="<?= url('/apps/admin/budget-import.php') ?>" class="admin-nav-link <?= basename($_SERVER['PHP_SELF']) == 'budget-import.php' ? 'active' : '' ?>">
+            Budget Import
+        </a>
         <a href="<?= url('/apps/admin/tasks-view.php') ?>" class="admin-nav-link <?= basename($_SERVER['PHP_SELF']) == 'tasks-view.php' ? 'active' : '' ?>">
             Tasks View
         </a>
@@ -31,6 +34,8 @@
             <div class="admin-nav-dropdown-content" id="reportsMenu">
                 <a href="<?= url('/apps/admin/reports/pulse-workload.php') ?>">Pulse & Workload</a>
                 <a href="<?= url('/apps/admin/reports/client-hours.php') ?>">Client Hours</a>
+                <a href="<?= url('/apps/admin/reports/budget-vs-actual.php') ?>">Budget vs Actual</a>
+                <a href="<?= url('/apps/admin/reports/burn-up.php') ?>">Burn-up</a>
             </div>
         </div>
     </div>
