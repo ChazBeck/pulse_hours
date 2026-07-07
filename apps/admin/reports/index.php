@@ -117,22 +117,25 @@ $pdo = get_db_connection();
                     <span class="arrow">View Report →</span>
                 </a>
                 
-                <!-- Placeholder for future reports -->
-                <div class="report-card" style="opacity: 0.6; cursor: not-allowed;">
+                <!-- Budget vs Actual Report -->
+                <a href="<?= url('apps/admin/reports/budget-vs-actual.php') ?>" class="report-card">
                     <h2>
                         <span class="icon">📈</span>
-                        Project Analytics
+                        Budget vs Actual
                     </h2>
-                    <p>Coming soon: Project progress, budget tracking, and completion forecasts.</p>
-                </div>
+                    <p>Compare each task's estimated (budgeted) hours against the hours actually logged, with variance and % of budget consumed by client and project.</p>
+                    <span class="arrow">View Report →</span>
+                </a>
                 
-                <div class="report-card" style="opacity: 0.6; cursor: not-allowed;">
+                <!-- Burn-up Report -->
+                <a href="<?= url('apps/admin/reports/burn-up.php') ?>" class="report-card">
                     <h2>
-                        <span class="icon">⏱️</span>
-                        Time Utilization
+                        <span class="icon">🔥</span>
+                        Burn-up
                     </h2>
-                    <p>Coming soon: Billable vs non-billable hours, capacity planning, and efficiency metrics.</p>
-                </div>
+                    <p>Watch cumulative hours climb week by week toward a client's budgeted total, with pace and projected weeks-to-budget.</p>
+                    <span class="arrow">View Report →</span>
+                </a>
                 
                 <div class="report-card" style="opacity: 0.6; cursor: not-allowed;">
                     <h2>
