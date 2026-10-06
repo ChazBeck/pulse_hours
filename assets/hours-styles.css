@@ -295,3 +295,14 @@
         width: 100%;
     }
 }
+
+/* Draft hours sent in from other apps (168 Hours) */
+.drafts-card { margin-bottom: 1.5rem; border-left: 4px solid #f7941d; }
+.drafts-title { margin: 0 0 .25rem; font-size: 1.15rem; }
+.drafts-meta { margin: 0 0 1rem; color: #666; font-size: .9rem; }
+.drafts-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: .9rem; }
+.drafts-table th, .drafts-table td { padding: .4rem .5rem; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+.drafts-table tr.draft-conflict td { background: #fff4e5; }
+.drafts-table small { display: block; color: #a15c00; }
+.drafts-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.hours-source { color: #a15c00; font-size: .85em; }
