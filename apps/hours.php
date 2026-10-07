@@ -339,7 +339,12 @@ foreach ($clients as $client) {
                     <form method="POST" action="" class="drafts-actions">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
                         <input type="hidden" name="batch_id" value="<?= (int) $batch['id'] ?>">
-                        <button type="submit" name="confirm_drafts" class="btn btn-primary">Confirm all</button>
+                        <?php $confirmable = count(array_filter($batch['drafts'], fn ($d) => $d['conflict'] === null)); ?>
+                        <?php if ($confirmable || empty($batch['drafts'])): ?>
+                            <button type="submit" name="confirm_drafts" class="btn btn-primary">Confirm all</button>
+                        <?php else: ?>
+                            <p class="drafts-meta">Everything left here clashes with hours you entered yourself, which are kept. Discard to clear it, or change your entry and confirm again.</p>
+                        <?php endif; ?>
                         <button type="submit" name="discard_drafts" class="btn btn-secondary"
                                 onclick="return confirm('Discard these imported hours?');">Discard</button>
                     </form>
