@@ -35,6 +35,40 @@ if (!$pulse_entry) {
 $target_year_week = $pulse_entry['year_week'];
 
 // ============================================================================
+// Draft hours sent in from other apps (e.g. the 168 Hours planner)
+// ============================================================================
+
+require_once __DIR__ . '/../includes/hours_drafts.php';
+
+// The draft tables come from database/migrate_add_hours_drafts.php; until it
+// has run, this page behaves exactly as it did before.
+$drafts_enabled = (bool) $pdo->query("SHOW TABLES LIKE 'hours_draft_batches'")->fetch();
+
+if ($drafts_enabled && $_SERVER['REQUEST_METHOD'] === 'POST'
+    && (isset($_POST['confirm_drafts']) || isset($_POST['discard_drafts']))) {
+    $batch_id = (int) ($_POST['batch_id'] ?? 0);
+    if (!auth_verify_csrf($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid form submission (CSRF token mismatch)';
+    } elseif (isset($_POST['confirm_drafts'])) {
+        try {
+            $r = pulse_drafts_confirm($pdo, (int) $user['id'], $batch_id);
+            $success_message = $r['confirmed'] . ' imported ' . ($r['confirmed'] === 1 ? 'entry' : 'entries') . ' confirmed.'
+                . ($r['kept'] ? ' ' . $r['kept'] . ' left as drafts because you already entered hours for that task on that day.' : '');
+        } catch (Throwable $e) {
+            error_log('hours.php confirm drafts: ' . $e->getMessage());
+            $error_message = 'Could not confirm the imported hours. Nothing was changed.';
+        }
+    } else {
+        pulse_drafts_discard($pdo, (int) $user['id'], $batch_id);
+        $success_message = 'Imported hours discarded.';
+    }
+}
+
+$pending_batches = $drafts_enabled ? pulse_drafts_pending($pdo, (int) $user['id']) : [];
+$source_labels = ['cos-168' => '168 Hours'];
+$hours_source_sql = $drafts_enabled ? 'source' : 'NULL AS source';
+
+// ============================================================================
 // Handle Hours Submission
 // ============================================================================
 
@@ -79,9 +113,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_hours'])) {
             
             if ($existing) {
                 // Update existing entry
+                // A row typed over by hand becomes the user's own: a later
+                // send from another app must never overwrite it.
                 $stmt = $pdo->prepare("
                     UPDATE hours 
-                    SET hours = ?, year_week = ?
+                    SET hours = ?, year_week = ?" . ($drafts_enabled ? ", source = NULL" : "") . "
                     WHERE id = ?
                 ");
                 $stmt->execute([$hours, $target_year_week, $existing['id']]);
@@ -167,7 +203,7 @@ foreach ($clients as $client) {
         $project_tasks = [];
         foreach ($tasks as $task) {
             $stmt = $pdo->prepare("
-                SELECT date_worked, hours 
+                SELECT date_worked, hours, {$hours_source_sql}
                 FROM hours 
                 WHERE user_id = ? AND task_id = ? AND year_week = ?
                 ORDER BY date_worked DESC
@@ -198,7 +234,7 @@ foreach ($clients as $client) {
     $client_tasks = [];
     foreach ($client_level_tasks as $task) {
         $stmt = $pdo->prepare("
-            SELECT date_worked, hours 
+            SELECT date_worked, hours, {$hours_source_sql}
             FROM hours 
             WHERE user_id = ? AND task_id = ? AND year_week = ?
             ORDER BY date_worked DESC
@@ -268,6 +304,53 @@ foreach ($clients as $client) {
                 </div>
             <?php endif; ?>
 
+            <?php foreach ($pending_batches as $batch): ?>
+                <div class="hours-card drafts-card">
+                    <h2 class="drafts-title">
+                        From <?= htmlspecialchars($source_labels[$batch['source']] ?? $batch['source']) ?> — awaiting confirmation
+                    </h2>
+                    <p class="drafts-meta">
+                        <?= date('M j', strtotime($batch['date_from'])) ?> – <?= date('M j, Y', strtotime($batch['date_to'])) ?>
+                        · <?= rtrim(rtrim(number_format($batch['total'], 2), '0'), '.') ?>h
+                        · sent <?= date('M j, g:ia', strtotime($batch['created_at'])) ?>
+                    </p>
+                    <?php if (empty($batch['drafts'])): ?>
+                        <p>No client hours in this week. Confirming clears anything sent for it before.</p>
+                    <?php else: ?>
+                        <table class="drafts-table">
+                            <thead><tr><th>Day</th><th>Client</th><th>Task</th><th>Hours</th></tr></thead>
+                            <tbody>
+                            <?php foreach ($batch['drafts'] as $d): ?>
+                                <tr<?= $d['conflict'] !== null ? ' class="draft-conflict"' : '' ?>>
+                                    <td><?= date('D M j', strtotime($d['date_worked'])) ?></td>
+                                    <td><?= htmlspecialchars($d['client_name']) ?></td>
+                                    <td><?= htmlspecialchars(($d['project_name'] ? $d['project_name'] . ' › ' : '') . $d['task_name']) ?></td>
+                                    <td>
+                                        <?= rtrim(rtrim($d['hours'], '0'), '.') ?>h
+                                        <?php if ($d['conflict'] !== null): ?>
+                                            <small>— you already entered <?= rtrim(rtrim(number_format($d['conflict'], 2), '0'), '.') ?>h here; yours is kept</small>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                    <form method="POST" action="" class="drafts-actions">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
+                        <input type="hidden" name="batch_id" value="<?= (int) $batch['id'] ?>">
+                        <?php $confirmable = count(array_filter($batch['drafts'], fn ($d) => $d['conflict'] === null)); ?>
+                        <?php if ($confirmable || empty($batch['drafts'])): ?>
+                            <button type="submit" name="confirm_drafts" class="btn btn-primary">Confirm all</button>
+                        <?php else: ?>
+                            <p class="drafts-meta">Everything left here clashes with hours you entered yourself, which are kept. Discard to clear it, or change your entry and confirm again.</p>
+                        <?php endif; ?>
+                        <button type="submit" name="discard_drafts" class="btn btn-secondary"
+                                onclick="return confirm('Discard these imported hours?');">Discard</button>
+                    </form>
+                </div>
+            <?php endforeach; ?>
+
             <!-- Hours Entry Card -->
             <div class="hours-card">
                 <form method="POST" action="" id="hoursForm">
@@ -307,7 +390,7 @@ foreach ($clients as $client) {
                                                                 <?php if (!empty($task['existing_hours'])): ?>
                                                                     <div class="existing-hours">
                                                                         <?php foreach ($task['existing_hours'] as $h): ?>
-                                                                            <?= date('M j', strtotime($h['date_worked'])) ?>: <?= $h['hours'] ?>h
+                                                                            <?= date('M j', strtotime($h['date_worked'])) ?>: <?= $h['hours'] ?>h<?php if (!empty($h['source'])): ?> <span class="hours-source">(<?= htmlspecialchars($source_labels[$h['source']] ?? $h['source']) ?>)</span><?php endif; ?>
                                                                         <?php endforeach; ?>
                                                                     </div>
                                                                 <?php endif; ?>
@@ -343,7 +426,7 @@ foreach ($clients as $client) {
                                                             <?php if (!empty($task['existing_hours'])): ?>
                                                                 <div class="existing-hours">
                                                                     <?php foreach ($task['existing_hours'] as $h): ?>
-                                                                        <?= date('M j', strtotime($h['date_worked'])) ?>: <?= $h['hours'] ?>h
+                                                                        <?= date('M j', strtotime($h['date_worked'])) ?>: <?= $h['hours'] ?>h<?php if (!empty($h['source'])): ?> <span class="hours-source">(<?= htmlspecialchars($source_labels[$h['source']] ?? $h['source']) ?>)</span><?php endif; ?>
                                                                     <?php endforeach; ?>
                                                                 </div>
                                                             <?php endif; ?>
