@@ -55,3 +55,5 @@ docker exec "$APP" sh -c "TEST_BASE=http://127.0.0.1:8099 TEST_TOKEN=test-token 
 echo "--- hours page"
 docker exec "$APP" sh -c "TEST_BASE=http://127.0.0.1:8099 TEST_TOKEN=test-token $P /t/app/tests/integration/hours_page_test.php" || {
   echo "--- server log"; docker exec "$APP" tail -40 /t/server.log; exit 1; }
+echo "--- confirm vs. a concurrent hand edit"
+docker exec "$APP" sh -c "$P /t/app/tests/integration/confirm_race_test.php" || exit 1

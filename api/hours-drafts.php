@@ -17,7 +17,7 @@
  *           same task and day; it is never overwritten.
  *
  * Errors: 401 unauthorized · 403 user_not_allowed · 404 unknown_user ·
- *         400 invalid_range|invalid_entry|unknown_task|duplicate_entry ·
+ *         400 invalid_range|invalid_entry|unknown_task|task_not_loggable|duplicate_entry ·
  *         413 body_too_large · 500 server_error
  */
 
@@ -97,6 +97,14 @@ try {
         $missing = array_values(array_diff($taskIds, $found));
         if ($missing) {
             api_fail(400, 'unknown_task', ['taskIds' => array_map('strval', $missing)]);
+        }
+        /* A task that exists but can no longer be logged against (completed, or
+           under an inactive project or client) is refused with its own code, so
+           the caller can tell the user the tag is closed rather than that Pulse
+           is unreachable. Same rule as the hours page and api/catalog.php. */
+        $closed = array_values(array_diff($taskIds, pulse_loggable_task_ids($pdo, $taskIds)));
+        if ($closed) {
+            api_fail(400, 'task_not_loggable', ['taskIds' => array_map('strval', $closed)]);
         }
     }
 
