@@ -75,3 +75,26 @@ if (!function_exists('jwt_is_admin')) {
 if (!function_exists('jwt_get_user')) {
     function jwt_get_user() { return _jwt_stub_user(); }
 }
+
+// CSRF helpers. In production these come from loginveerles' common_functions.php
+// (pulled in by the real jwt_include.php). The stub replaces that library, so we
+// provide session-based equivalents here — otherwise every admin form page fatals
+// on the undefined auth_csrf_token(). Local-dev only; never loaded in production.
+if (!function_exists('auth_csrf_token')) {
+    function auth_csrf_token() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
+    }
+}
+if (!function_exists('auth_verify_csrf')) {
+    function auth_verify_csrf($token) {
+        return !empty($_SESSION['csrf_token'])
+            && is_string($token)
+            && hash_equals($_SESSION['csrf_token'], $token);
+    }
+}
