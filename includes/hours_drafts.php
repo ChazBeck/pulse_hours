@@ -19,6 +19,29 @@
 
 require_once __DIR__ . '/date_helpers.php';
 
+/**
+ * Of the given task ids, the ones a user may log hours against right now — the
+ * same rule apps/hours.php and api/catalog.php apply when they offer choices:
+ * the task is not completed, and its client (via its project, when it has one)
+ * is active, as is that project. Keep the three in step.
+ */
+function pulse_loggable_task_ids(PDO $pdo, array $taskIds): array
+{
+    if (!$taskIds) return [];
+    $in = implode(',', array_fill(0, count($taskIds), '?'));
+    $stmt = $pdo->prepare("
+        SELECT t.id FROM tasks t
+        LEFT JOIN projects p ON p.id = t.project_id
+        JOIN clients c ON c.id = CASE WHEN t.project_id IS NULL THEN t.client_id ELSE p.client_id END
+        WHERE t.id IN ($in)
+          AND t.status != 'completed'
+          AND (t.project_id IS NULL OR p.active = 1)
+          AND c.active = 1
+    ");
+    $stmt->execute(array_values($taskIds));
+    return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
 /** Hand-entered `hours` rows that collide with the given entries, keyed "taskId|date". */
 function pulse_drafts_manual_rows(PDO $pdo, int $userId, string $from, string $to): array
 {
@@ -156,14 +179,25 @@ function pulse_drafts_confirm(PDO $pdo, int $userId, int $batchId): array
         if ($batch['confirmed_at'] === null) {
             $keep = [];
             foreach ($drafts as $d) $keep[$d['task_id'] . '|' . $d['date_worked']] = true;
+            /* Two guards against losing a row the user is editing by hand right
+               now (a hand edit clears `source`, making the row theirs):
+                 - FOR UPDATE locks these rows for the rest of the transaction, so
+                   an edit on hours.php waits for the confirm instead of landing
+                   between this read and the delete below;
+                 - the delete only removes a row that STILL carries this source,
+                   so an edit that committed first is never deleted either.
+               A locking read sees the latest committed rows, not the snapshot. */
             $old = $pdo->prepare("
                 SELECT id, task_id, date_worked FROM hours
                 WHERE user_id = ? AND source = ? AND date_worked BETWEEN ? AND ?
+                FOR UPDATE
             ");
             $old->execute([$userId, $batch['source'], $batch['date_from'], $batch['date_to']]);
-            $remove = $pdo->prepare("DELETE FROM hours WHERE id = ?");
+            $remove = $pdo->prepare("DELETE FROM hours WHERE id = ? AND user_id = ? AND source = ?");
             foreach ($old->fetchAll(PDO::FETCH_ASSOC) as $o) {
-                if (!isset($keep[$o['task_id'] . '|' . $o['date_worked']])) $remove->execute([$o['id']]);
+                if (!isset($keep[$o['task_id'] . '|' . $o['date_worked']])) {
+                    $remove->execute([$o['id'], $userId, $batch['source']]);
+                }
             }
         }
 

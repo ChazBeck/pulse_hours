@@ -30,6 +30,20 @@ check($s === 401, 'a wrong token is refused');
 [$s] = call('GET', '/api/catalog.php', null, '');
 check($s === 401, 'no token is refused');
 
+// ---- the auth contract callers rely on (pinned: the Chief of Staff sends "Authorization: Bearer <token>")
+function raw_get(string $path, string $header): int {
+    global $base;
+    $ctx = stream_context_create(['http' => ['method' => 'GET', 'ignore_errors' => true, 'header' => $header . "\r\n"]]);
+    file_get_contents($base . $path, false, $ctx);
+    preg_match('#HTTP/\S+ (\d+)#', $http_response_header[0] ?? '', $m);
+    return (int) ($m[1] ?? 0);
+}
+check(raw_get('/api/catalog.php', "Authorization: Bearer $token") === 200, 'Authorization: Bearer <token> is accepted');
+check(raw_get('/api/catalog.php', "Authorization: bearer $token") === 200, 'the scheme is case-insensitive');
+check(raw_get('/api/catalog.php', "X-Pulse-Token: $token") === 200, 'X-Pulse-Token is accepted');
+check(raw_get('/api/catalog.php', "Authorization: Basic $token") === 401, 'another scheme is refused');
+check(raw_get('/api/catalog.php', "Authorization: $token") === 401, 'a bare token with no scheme is refused');
+
 // ---- catalog uses hours.php's filters, project tasks under the PROJECT's client
 [$s, $c] = call('GET', '/api/catalog.php');
 check($s === 200 && $c['ok'] === true, 'catalog answers');
@@ -69,12 +83,19 @@ foreach ([
     ['not a quarter hour', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 10, 'hours' => 1.1]]], 400],
     ['over 24h', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 10, 'hours' => 25]]], 400],
     ['unknown task', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 999, 'hours' => 1]]], 400],
+    ['completed task', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 13, 'hours' => 1]]], 400],
+    ['task under an inactive project', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 14, 'hours' => 1]]], 400],
+    ['task of an inactive client', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 15, 'hours' => 1]]], 400],
     ['duplicate entry', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 10, 'hours' => 1], ['date' => '2026-04-13', 'taskId' => '10', 'hours' => 2]]], 400],
 ] as [$what, $body, $want]) {
     [$s] = call('POST', '/api/hours-drafts.php', $body);
     check($s === $want, "$what → $want (got $s)");
 }
 check((int) $pdo->query("SELECT COUNT(*) FROM hours_drafts")->fetchColumn() === 2, 'refused sends changed nothing');
+[$s, $r] = call('POST', '/api/hours-drafts.php', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 13, 'hours' => 1], ['date' => '2026-04-13', 'taskId' => 10, 'hours' => 1]]]);
+check($r['error'] === 'task_not_loggable' && $r['taskIds'] === ['13'], 'a closed task is named with its own error code: ' . json_encode($r));
+[$s, $r] = call('POST', '/api/hours-drafts.php', $week + ['entries' => [['date' => '2026-04-13', 'taskId' => 999, 'hours' => 1]]]);
+check($r['error'] === 'unknown_task', 'a task that does not exist is still unknown_task');
 
 // ---- a hand-entered row is a conflict and is never overwritten
 $pdo->exec("INSERT INTO hours (user_id, project_id, task_id, date_worked, year_week, hours) VALUES (101, 601, 10, '2026-04-13', '2026-16', 0.75)");

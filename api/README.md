@@ -10,6 +10,11 @@ They are **not** behind SSO, because a server makes these calls, not a browser.
 
 The request and response shapes are documented at the top of each file.
 
+## Errors a caller should handle
+- `401 unauthorized`: missing or wrong token. Send `Authorization: Bearer <token>`; `X-Pulse-Token: <token>` is also accepted.
+- `400 unknown_task`: a task id that doesn't exist, listed in `taskIds`.
+- `400 task_not_loggable`: the task exists but can no longer be logged, listed in `taskIds`. It is completed, or its project or client is inactive. This is the same rule as the hours page.
+
 ## Rules
 - **Hand-entered hours (`hours.source IS NULL`) are never changed.**
   - A draft for the same task and day is reported as a conflict.
