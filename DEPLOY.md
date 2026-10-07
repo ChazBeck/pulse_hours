@@ -68,16 +68,8 @@ chmod 755 uploads/logos
 
 ### 4. First Login
 
-1. Visit your site: `https://yourdomain.com/auth/login.php`
-2. Login with default credentials:
-   - Email: `admin@plusehours.com`
-   - Password: `Admin123!`
-
-3. **Immediately change the admin password:**
-   - Go to Admin → Users
-   - Click Edit on admin user
-   - Set a strong password
-   - Save
+Sign in through Veerless SSO. No default account exists: your user row is
+created on first visit and the Admin role comes from your SSO account.
 
 ### 5. Enable Auto-Deployment (Optional)
 
@@ -126,7 +118,7 @@ The site updates automatically within seconds!
 
 ### Config Files Are Protected
 
-Your `config/app_config.php` and `config/db_config.php` are in `.gitignore`, so they **won't be overwritten** during updates. This is intentional - your production credentials stay safe!
+Your `config/app_config.php` and `config/db_config.php` are in `.gitignore` and are not tracked, so they **won't be overwritten** during updates. This is intentional - your production credentials stay safe!
 
 ### What Gets Deployed
 

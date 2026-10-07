@@ -8,6 +8,7 @@
  * their previous alphabetical fallback order.
  */
 
+require_once __DIR__ . '/../scripts/cli_only.php';
 require_once __DIR__ . '/../config/db_config.php';
 
 try {

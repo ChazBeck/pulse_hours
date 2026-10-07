@@ -259,30 +259,16 @@ CREATE TABLE IF NOT EXISTS `hours` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- Initial Data - Default Admin User
--- ============================================================================
--- Email: admin@plusehours.com
--- Password: admin123
--- IMPORTANT: Change this password immediately after first login!
--- ============================================================================
-
-INSERT INTO `users` (`email`, `password_hash`, `first_name`, `last_name`, `role`, `is_active`)
-VALUES (
-    'admin@plusehours.com',
-    '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
-    'Admin',
-    'User',
-    'Admin',
-    1
-);
-
--- ============================================================================
 -- Database Setup Complete
 -- ============================================================================
+-- No users are seeded. Sign-in is handled by Veerless SSO: the first visit by
+-- an SSO user creates their row automatically (sso/sso_include.php), and the
+-- Admin role is taken from the SSO account.
+--
 -- Next steps:
--- 1. Update config/db_config.php with your database credentials
--- 2. Login with admin@plusehours.com / admin123
--- 3. Change the default admin password immediately
+-- 1. Copy config/db_config.example.php to config/db_config.php (or set the
+--    DB_HOST / DB_USER / DB_PASS / DB_NAME environment variables)
+-- 2. Sign in through SSO
 -- ============================================================================
 
 -- ============================================================================

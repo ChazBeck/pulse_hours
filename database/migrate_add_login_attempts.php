@@ -5,6 +5,7 @@
  * Run this script once to add the login_attempts table for rate limiting.
  */
 
+require_once __DIR__ . '/../scripts/cli_only.php';
 require_once __DIR__ . '/../config/db_config.php';
 
 try {
