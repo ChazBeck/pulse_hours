@@ -35,7 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = trim($_POST['name'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $status = $_POST['status'] ?? 'not-started';
-            
+            $estimated_hours = ($_POST['estimated_hours'] ?? '') === '' ? null : floatval($_POST['estimated_hours']);
+            $estimated_hours_marcy = ($_POST['estimated_hours_marcy'] ?? '') === '' ? null : floatval($_POST['estimated_hours_marcy']);
+
             // Validate
             if (empty($name)) {
                 $message = 'Task name is required.';
@@ -45,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message_type = 'error';
             } else {
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO tasks (client_id, project_id, name, description, status) VALUES (?, ?, ?, ?, ?)");
-                    $stmt->execute([$client_id, $project_id, $name, $description, $status]);
+                    $stmt = $pdo->prepare("INSERT INTO tasks (client_id, project_id, name, description, status, estimated_hours, estimated_hours_marcy) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$client_id, $project_id, $name, $description, $status, $estimated_hours, $estimated_hours_marcy]);
                     $message = 'Task added successfully!';
                     $message_type = 'success';
                 } catch (PDOException $e) {
@@ -64,7 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = trim($_POST['name'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $status = $_POST['status'] ?? 'not-started';
-            
+            $estimated_hours = ($_POST['estimated_hours'] ?? '') === '' ? null : floatval($_POST['estimated_hours']);
+            $estimated_hours_marcy = ($_POST['estimated_hours_marcy'] ?? '') === '' ? null : floatval($_POST['estimated_hours_marcy']);
+
             if (empty($name)) {
                 $message = 'Task name is required.';
                 $message_type = 'error';
@@ -76,8 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message_type = 'error';
             } else {
                 try {
-                    $stmt = $pdo->prepare("UPDATE tasks SET client_id = ?, project_id = ?, name = ?, description = ?, status = ? WHERE id = ?");
-                    $stmt->execute([$client_id, $project_id, $name, $description, $status, $id]);
+                    $stmt = $pdo->prepare("UPDATE tasks SET client_id = ?, project_id = ?, name = ?, description = ?, status = ?, estimated_hours = ?, estimated_hours_marcy = ? WHERE id = ?");
+                    $stmt->execute([$client_id, $project_id, $name, $description, $status, $estimated_hours, $estimated_hours_marcy, $id]);
                     $message = 'Task updated successfully!';
                     $message_type = 'success';
                 } catch (PDOException $e) {
@@ -273,7 +277,29 @@ $tasks = $stmt->fetchAll();
                                 <option value="blocked" <?= ($edit_task && $edit_task['status'] == 'blocked') ? 'selected' : '' ?>>Blocked</option>
                             </select>
                         </div>
-                        
+
+                        <div class="form-group">
+                            <label for="estimated_hours">Estimated Hours</label>
+                            <input type="number" id="estimated_hours" name="estimated_hours"
+                                   step="0.25" min="0"
+                                   value="<?= ($edit_task && $edit_task['estimated_hours'] !== null) ? htmlspecialchars($edit_task['estimated_hours']) : '' ?>"
+                                   placeholder="e.g. 40 (from the client budget's Projected Hours)">
+                            <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
+                                The budgeted / projected hours for this task. Leave blank if not budgeted. Compared against logged hours in the Budget vs Actual report.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="estimated_hours_marcy">&hellip; of which Marcy (senior) hours</label>
+                            <input type="number" id="estimated_hours_marcy" name="estimated_hours_marcy"
+                                   step="0.25" min="0"
+                                   value="<?= ($edit_task && isset($edit_task['estimated_hours_marcy']) && $edit_task['estimated_hours_marcy'] !== null) ? htmlspecialchars($edit_task['estimated_hours_marcy']) : '' ?>"
+                                   placeholder="e.g. 10">
+                            <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
+                                How many of the estimated hours are Marcy's (billed at the senior rate). Everyone else = estimate minus this. Drives the cost split.
+                            </small>
+                        </div>
+
                         <div class="btn-group">
                             <button type="submit" class="btn btn-primary">
                                 <?= $edit_task ? 'Update Task' : 'Add Task' ?>
@@ -306,6 +332,7 @@ $tasks = $stmt->fetchAll();
                                     <th>Project</th>
                                     <th>Task Name</th>
                                     <th>Status</th>
+                                    <th>Est. Hrs</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
@@ -335,6 +362,13 @@ $tasks = $stmt->fetchAll();
                                         $status_label = ucwords(str_replace('-', ' ', $task['status']));
                                         ?>
                                         <span class="status-badge <?= $status_class ?>"><?= $status_label ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($task['estimated_hours'] !== null): ?>
+                                            <?= rtrim(rtrim(number_format($task['estimated_hours'], 2), '0'), '.') ?>
+                                        <?php else: ?>
+                                            <em style="color: #9ca3af;">&mdash;</em>
+                                        <?php endif; ?>
                                     </td>
                                     <td><?= date('M j, Y', strtotime($task['created_at'])) ?></td>
                                     <td>
