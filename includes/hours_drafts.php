@@ -10,8 +10,16 @@
  *    REPLACES the earlier unconfirmed send from that source, so re-sending a
  *    week is idempotent and a block deleted at the source disappears.
  *  - Hours typed into Pulse by hand (hours.source IS NULL) are NEVER changed.
- *    A draft for the same user, task and day is a conflict: it is reported, and
- *    stays behind as a draft when the rest of its send is confirmed.
+ *    A draft for the same user, task and PULSE WEEK (year_week) as hand-entered
+ *    hours is a conflict: it is reported, and stays behind as a draft when the
+ *    rest of its send is confirmed.
+ *  - Weeks, not days, decide. People enter LAST week's hours early the next
+ *    week, and apps/hours.php stamps each entry with the day it was typed and
+ *    the week it is for. A hand entry dated Monday Oct 5 for week 40 says
+ *    nothing about Oct 5 itself, so matching drafts to hand entries by date
+ *    raised false clashes. Drafts carry real days, each filed under the ISO
+ *    week that day falls in; `hours` is unique per user, task, day AND week
+ *    (database/migrate_hours_unique_by_week.php) so the two can sit side by side.
  *  - Confirming a send makes `hours` match it for that source and range: rows
  *    the source wrote earlier are updated, added, or removed (the block was
  *    deleted since) — but only rows carrying that same source.
@@ -42,19 +50,33 @@ function pulse_loggable_task_ids(PDO $pdo, array $taskIds): array
     return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 }
 
-/** Hand-entered `hours` rows that collide with the given entries, keyed "taskId|date". */
-function pulse_drafts_manual_rows(PDO $pdo, int $userId, string $from, string $to): array
+/**
+ * Hand-entered hours per task for the given Pulse weeks, keyed "taskId|yearWeek"
+ * (summed: a week can hold several hand rows for one task, typed on different
+ * days).
+ */
+function pulse_drafts_manual_weeks(PDO $pdo, int $userId, array $weeks): array
 {
+    $weeks = array_values(array_unique($weeks));
+    if (!$weeks) return [];
+    $in = implode(',', array_fill(0, count($weeks), '?'));
     $stmt = $pdo->prepare("
-        SELECT task_id, date_worked, hours FROM hours
-        WHERE user_id = ? AND source IS NULL AND date_worked BETWEEN ? AND ?
+        SELECT task_id, year_week, SUM(hours) AS hours FROM hours
+        WHERE user_id = ? AND source IS NULL AND year_week IN ($in)
+        GROUP BY task_id, year_week
     ");
-    $stmt->execute([$userId, $from, $to]);
+    $stmt->execute(array_merge([$userId], $weeks));
     $out = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $out[$r['task_id'] . '|' . $r['date_worked']] = (float) $r['hours'];
+        $out[$r['task_id'] . '|' . $r['year_week']] = (float) $r['hours'];
     }
     return $out;
+}
+
+/** The Pulse (ISO, Mon–Sun) week a calendar day is filed under, e.g. "2026-41". */
+function pulse_week_of(string $date): string
+{
+    return get_year_week(strtotime($date));
 }
 
 /**
@@ -89,16 +111,17 @@ function pulse_drafts_store(PDO $pdo, int $userId, string $source, string $from,
             $projectId = $taskProject->fetchColumn();
             $draft->execute([
                 $batchId, $e['taskId'], $projectId === false ? null : $projectId,
-                $e['date'], get_year_week(strtotime($e['date'])), $e['hours'],
+                $e['date'], pulse_week_of($e['date']), $e['hours'],
             ]);
         }
 
-        $manual = pulse_drafts_manual_rows($pdo, $userId, $from, $to);
+        $manual = pulse_drafts_manual_weeks($pdo, $userId, array_map(static fn ($e) => pulse_week_of($e['date']), $entries));
         $conflicts = [];
         foreach ($entries as $e) {
-            $key = $e['taskId'] . '|' . $e['date'];
+            $week = pulse_week_of($e['date']);
+            $key = $e['taskId'] . '|' . $week;
             if (isset($manual[$key])) {
-                $conflicts[] = ['date' => $e['date'], 'taskId' => (string) $e['taskId'], 'existingHours' => $manual[$key]];
+                $conflicts[] = ['date' => $e['date'], 'yearWeek' => $week, 'taskId' => (string) $e['taskId'], 'existingHours' => $manual[$key]];
             }
         }
 
@@ -125,7 +148,7 @@ function pulse_drafts_pending(PDO $pdo, int $userId): array
     if (!$batches) return [];
 
     $rows = $pdo->prepare("
-        SELECT d.task_id, d.date_worked, d.hours, t.name AS task_name,
+        SELECT d.task_id, d.date_worked, d.year_week, d.hours, t.name AS task_name,
                c.name AS client_name, p.name AS project_name
         FROM hours_drafts d
         JOIN tasks t ON t.id = d.task_id
@@ -136,15 +159,19 @@ function pulse_drafts_pending(PDO $pdo, int $userId): array
     ");
     foreach ($batches as &$b) {
         $rows->execute([$b['id']]);
-        $manual = pulse_drafts_manual_rows($pdo, $userId, $b['date_from'], $b['date_to']);
+        $list = $rows->fetchAll(PDO::FETCH_ASSOC);
+        $manual = pulse_drafts_manual_weeks($pdo, $userId, array_column($list, 'year_week'));
         $b['drafts'] = [];
         $b['total'] = 0.0;
-        foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $key = $r['task_id'] . '|' . $r['date_worked'];
-            $r['conflict'] = $manual[$key] ?? null;
+        $b['weeks'] = [];
+        foreach ($list as $r) {
+            $r['conflict'] = $manual[$r['task_id'] . '|' . $r['year_week']] ?? null;
             $b['total'] += (float) $r['hours'];
+            $b['weeks'][$r['year_week']] = true;
             $b['drafts'][] = $r;
         }
+        $b['weeks'] = array_keys($b['weeks']);
+        sort($b['weeks']);
     }
     unset($b);
     return $batches;
@@ -169,7 +196,7 @@ function pulse_drafts_confirm(PDO $pdo, int $userId, int $batchId): array
         $drafts = $pdo->prepare("SELECT * FROM hours_drafts WHERE batch_id = ?");
         $drafts->execute([$batchId]);
         $drafts = $drafts->fetchAll(PDO::FETCH_ASSOC);
-        $manual = pulse_drafts_manual_rows($pdo, $userId, $batch['date_from'], $batch['date_to']);
+        $manual = pulse_drafts_manual_weeks($pdo, $userId, array_column($drafts, 'year_week'));
 
         /* Rows this source wrote earlier for the range and no longer sends: the
            block was deleted or untagged at the source since. Only on the FIRST
@@ -213,7 +240,7 @@ function pulse_drafts_confirm(PDO $pdo, int $userId, int $batchId): array
         $confirmed = 0;
         $kept = 0;
         foreach ($drafts as $d) {
-            if (isset($manual[$d['task_id'] . '|' . $d['date_worked']])) {
+            if (isset($manual[$d['task_id'] . '|' . $d['year_week']])) {
                 $kept++;
                 continue;
             }

@@ -29,6 +29,8 @@ done
 # The schema as an EXISTING install has it: the base file without this
 # change's own section, then the earlier migrations, then this one — twice.
 docker exec "$APP" sh -c "sed '/Draft hours from other apps/,\$d' /t/app/database/setup_database.sql | sed '\$d' > /t/base.sql"
+# ...and with hours' ORIGINAL unique key, so the week migration has work to do.
+docker exec "$APP" sh -c "sed -i 's/UNIQUE KEY \`unique_user_task_date_week\` (\`user_id\`, \`task_id\`, \`date_worked\`, \`year_week\`)/UNIQUE KEY \`unique_user_task_date\` (\`user_id\`, \`task_id\`, \`date_worked\`)/' /t/base.sql && grep -c unique_user_task_date\\\` /t/base.sql"
 # setup_database.sql creates projects before project_templates, which it
 # references, so it only loads with FK checks off (as a dump restore would).
 docker exec -i "$APP" sh -c "echo 'SET FOREIGN_KEY_CHECKS=0;'; cat /t/base.sql" | docker exec -i "$DB" mariadb -uroot -ptest
@@ -38,6 +40,8 @@ echo "--- migration, first run"
 docker exec "$APP" sh -c "$P /t/app/database/migrate_add_hours_drafts.php"
 echo "--- migration, second run (must change nothing)"
 docker exec "$APP" sh -c "$P /t/app/database/migrate_add_hours_drafts.php"
+echo "--- week-key migration, twice"
+docker exec "$APP" sh -c "$P /t/app/database/migrate_hours_unique_by_week.php && $P /t/app/database/migrate_hours_unique_by_week.php"
 docker exec -i "$DB" mariadb -uroot -ptest plusehours < tests/integration/seed.sql
 
 # Tokens: the file holds only hashes.

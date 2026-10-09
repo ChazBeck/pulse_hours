@@ -137,6 +137,36 @@ check(!isset($byKey['2026-04-15|11']), 'a block no longer sent is removed from h
 check(($byKey['2026-04-13|10']['hours'] ?? null) === '0.75', 'the hand-entered row survives every confirm');
 check((int) $pdo->query("SELECT COUNT(*) FROM hours_draft_batches")->fetchColumn() === 0, 'a fully confirmed send is cleared');
 
+// ---- weeks, not days (what happened on 2026-10-09)
+// People type LAST week's hours early the next week; hours.php files them under
+// that week but dates them the day they were typed. A hand entry typed Monday
+// Apr 20 for week 16 must neither clash with, nor block, 168 Hours work actually
+// done on Apr 20 (week 17).
+$pdo->exec("DELETE FROM hours_draft_batches WHERE user_id = 101");
+$pdo->exec("INSERT INTO hours (user_id, project_id, task_id, date_worked, year_week, hours) VALUES (101, 601, 10, '2026-04-20', '2026-16', 20.00)");
+$wk = ['email' => 'charlie@veerless.com', 'from' => '2026-04-19', 'to' => '2026-04-25'];
+[$s, $r] = call('POST', '/api/hours-drafts.php', $wk + ['entries' => [
+    ['date' => '2026-04-20', 'taskId' => 10, 'hours' => 1.5],   // week 17: last week's hand entry is NOT a clash
+    ['date' => '2026-04-21', 'taskId' => 11, 'hours' => 2],
+]]);
+check($s === 200 && $r['conflicts'] === [], 'last week\'s hours typed on the same day are not a clash: ' . json_encode($r['conflicts'] ?? $r));
+$batch = (int) $pdo->query("SELECT id FROM hours_draft_batches WHERE user_id = 101 AND date_from = '2026-04-19'")->fetchColumn();
+$res = pulse_drafts_confirm($pdo, 101, $batch);
+check($res === ['confirmed' => 2, 'kept' => 0], 'both drafts confirm: ' . json_encode($res));
+$rows = $pdo->query("SELECT year_week, hours, source FROM hours WHERE user_id = 101 AND task_id = 10 AND date_worked = '2026-04-20' ORDER BY year_week")->fetchAll(PDO::FETCH_ASSOC);
+check($rows === [['year_week' => '2026-16', 'hours' => '20.00', 'source' => null], ['year_week' => '2026-17', 'hours' => '1.50', 'source' => 'cos-168']],
+    'the hand entry (week 16) and the 168 Hours row (week 17) sit side by side on the same day: ' . json_encode($rows));
+
+// A hand entry for the SAME task in the SAME week is still a clash, whichever day it was typed.
+$pdo->exec("INSERT INTO hours (user_id, project_id, task_id, date_worked, year_week, hours) VALUES (101, NULL, 11, '2026-04-27', '2026-17', 4.00)");
+[$s, $r] = call('POST', '/api/hours-drafts.php', $wk + ['entries' => [['date' => '2026-04-21', 'taskId' => 11, 'hours' => 2]]]);
+check(count($r['conflicts']) === 1 && $r['conflicts'][0]['yearWeek'] === '2026-17' && $r['conflicts'][0]['existingHours'] == 4,
+    'same task, same week, typed on another day: a clash, with the week named: ' . json_encode($r['conflicts']));
+$pending = pulse_drafts_pending($pdo, 101);
+check(($pending[0]['weeks'] ?? null) === ['2026-17'], 'the confirm panel knows which Pulse week the send goes into');
+$pdo->exec("DELETE FROM hours_draft_batches WHERE user_id = 101");
+$pdo->exec("DELETE FROM hours WHERE user_id = 101 AND date_worked >= '2026-04-19'");
+
 // ---- discard
 call('POST', '/api/hours-drafts.php', $week + ['entries' => [['date' => '2026-04-16', 'taskId' => 10, 'hours' => 2]]]);
 $batch = (int) $pdo->query("SELECT id FROM hours_draft_batches")->fetchColumn();

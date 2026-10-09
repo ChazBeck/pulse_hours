@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS `hours` (
     INDEX `idx_task_id` (`task_id`),
     INDEX `idx_date_worked` (`date_worked`),
     INDEX `idx_year_week` (`year_week`),
-    UNIQUE KEY `unique_user_task_date` (`user_id`, `task_id`, `date_worked`),
+    UNIQUE KEY `unique_user_task_date_week` (`user_id`, `task_id`, `date_worked`, `year_week`),
     
     CONSTRAINT `fk_hours_user_id`
         FOREIGN KEY (`user_id`)

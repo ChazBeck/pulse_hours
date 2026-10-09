@@ -42,8 +42,9 @@ api(['email' => 'charlie@veerless.com', 'from' => '2026-04-12', 'to' => '2026-04
 
 $html = page('GET', '/apps/hours.php');
 check(str_contains($html, 'From 168 Hours — awaiting confirmation'), 'the panel is shown');
+check(str_contains($html, 'Goes into Pulse week 16 (Apr 13 - Apr 19, 2026)'), 'the panel says which Pulse week the hours go into');
 check(str_contains($html, 'Northwind') && str_contains($html, 'Reporting'), 'drafts are named by client and task');
-check(str_contains($html, 'you already entered 0.75h here; yours is kept'), 'the clash is spelled out');
+check(str_contains($html, 'you already entered 0.75h for this task in week 16; yours is kept'), 'the clash is spelled out');
 preg_match('/name="csrf_token" value="([^"]+)"/', $html, $m);
 preg_match('/name="batch_id" value="(\d+)"/', $html, $b);
 check(!empty($m[1]) && !empty($b[1]), 'the form carries a CSRF token and the batch');

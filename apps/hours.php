@@ -103,12 +103,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_hours'])) {
                 throw new Exception('Invalid task ID: ' . $task_id);
             }
             
-            // Check if entry already exists for this user/task/date
+            // Check if entry already exists for this user/task/date IN THIS WEEK.
+            // A row is unique per user, task, day and week: last week's hours
+            // typed today, and an imported row for today's own work, are
+            // different rows and must not overwrite each other.
             $stmt = $pdo->prepare("
                 SELECT id FROM hours 
-                WHERE user_id = ? AND task_id = ? AND date_worked = ?
+                WHERE user_id = ? AND task_id = ? AND date_worked = ? AND year_week = ?
             ");
-            $stmt->execute([$user['id'], $task_id, $date_worked]);
+            $stmt->execute([$user['id'], $task_id, $date_worked, $target_year_week]);
             $existing = $stmt->fetch();
             
             if ($existing) {
@@ -310,7 +313,10 @@ foreach ($clients as $client) {
                         From <?= htmlspecialchars($source_labels[$batch['source']] ?? $batch['source']) ?> — awaiting confirmation
                     </h2>
                     <p class="drafts-meta">
-                        <?= date('M j', strtotime($batch['date_from'])) ?> – <?= date('M j, Y', strtotime($batch['date_to'])) ?>
+                        Goes into <?= implode(' and ', array_map(fn ($w) => 'Pulse week ' . (int) substr($w, 5) . ' (' . format_week_range($w) . ')', $batch['weeks'])) ?>
+                    </p>
+                    <p class="drafts-meta">
+                        Planner week <?= date('M j', strtotime($batch['date_from'])) ?> – <?= date('M j, Y', strtotime($batch['date_to'])) ?>
                         · <?= rtrim(rtrim(number_format($batch['total'], 2), '0'), '.') ?>h
                         · sent <?= date('M j, g:ia', strtotime($batch['created_at'])) ?>
                     </p>
@@ -318,17 +324,18 @@ foreach ($clients as $client) {
                         <p>No client hours in this week. Confirming clears anything sent for it before.</p>
                     <?php else: ?>
                         <table class="drafts-table">
-                            <thead><tr><th>Day</th><th>Client</th><th>Task</th><th>Hours</th></tr></thead>
+                            <thead><tr><th>Day</th><th>Week</th><th>Client</th><th>Task</th><th>Hours</th></tr></thead>
                             <tbody>
                             <?php foreach ($batch['drafts'] as $d): ?>
                                 <tr<?= $d['conflict'] !== null ? ' class="draft-conflict"' : '' ?>>
                                     <td><?= date('D M j', strtotime($d['date_worked'])) ?></td>
+                                    <td><?= (int) substr($d['year_week'], 5) ?></td>
                                     <td><?= htmlspecialchars($d['client_name']) ?></td>
                                     <td><?= htmlspecialchars(($d['project_name'] ? $d['project_name'] . ' › ' : '') . $d['task_name']) ?></td>
                                     <td>
                                         <?= rtrim(rtrim($d['hours'], '0'), '.') ?>h
                                         <?php if ($d['conflict'] !== null): ?>
-                                            <small>— you already entered <?= rtrim(rtrim(number_format($d['conflict'], 2), '0'), '.') ?>h here; yours is kept</small>
+                                            <small>— you already entered <?= rtrim(rtrim(number_format($d['conflict'], 2), '0'), '.') ?>h for this task in week <?= (int) substr($d['year_week'], 5) ?>; yours is kept</small>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
