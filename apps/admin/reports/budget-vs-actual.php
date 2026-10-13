@@ -147,6 +147,7 @@ $grandCostPct = $grandEstCost > 0 ? $grandActCost / $grandEstCost * 100 : null;
     </style>
 </head>
 <body>
+    <?php include __DIR__ . '/../../../_header.php'; ?>
     <?php include __DIR__ . '/../_admin_nav.php'; ?>
 
     <main class="admin-content">
