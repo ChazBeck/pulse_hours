@@ -1,6 +1,8 @@
 INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_active) VALUES
   (101, 'charlie@veerless.com', 'x', 'Charlie', 'Beck', 'Admin', 1),
-  (102, 'gone@veerless.com', 'x', 'Gone', 'User', 'User', 0);
+  (102, 'gone@veerless.com', 'x', 'Gone', 'User', 'User', 0),
+  (103, 'ann@veerless.com', 'x', 'Ann', 'Thomas', 'User', 1),
+  (104, 'katie@veerless.com', 'x', 'Katie', 'Yoder', 'User', 1);
 INSERT INTO clients (id, name, active) VALUES (501, 'Northwind', 1), (503, 'Dormant', 0);
 UPDATE clients SET is_internal = 0 WHERE id IN (501, 503);
 INSERT INTO projects (id, client_id, name, active) VALUES (601, 501, 'Retainer', 1), (602, 501, 'Old project', 0);

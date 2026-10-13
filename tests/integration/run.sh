@@ -45,6 +45,8 @@ echo "--- migration, second run (must change nothing)"
 docker exec "$APP" sh -c "$P /t/app/database/migrate_add_hours_drafts.php"
 echo "--- week-key migration, twice"
 docker exec "$APP" sh -c "$P /t/app/database/migrate_hours_unique_by_week.php && $P /t/app/database/migrate_hours_unique_by_week.php"
+echo "--- high fives migration, twice"
+docker exec "$APP" sh -c "$P /t/app/database/migrate_add_high_fives.php && $P /t/app/database/migrate_add_high_fives.php"
 docker exec -i "$DB" mariadb -uroot -ptest plusehours < tests/integration/seed.sql
 
 # Tokens: the file holds only hashes.
@@ -61,6 +63,9 @@ docker exec "$APP" sh -c "TEST_BASE=http://127.0.0.1:8099 TEST_TOKEN=test-token 
   echo "--- server log"; docker exec "$APP" cat /t/server.log; exit 1; }
 echo "--- hours page"
 docker exec "$APP" sh -c "TEST_BASE=http://127.0.0.1:8099 TEST_TOKEN=test-token $P /t/app/tests/integration/hours_page_test.php" || {
+  echo "--- server log"; docker exec "$APP" tail -40 /t/server.log; exit 1; }
+echo "--- high fives"
+docker exec "$APP" sh -c "TEST_BASE=http://127.0.0.1:8099 $P /t/app/tests/integration/high_fives_test.php" || {
   echo "--- server log"; docker exec "$APP" tail -40 /t/server.log; exit 1; }
 echo "--- confirm vs. a concurrent hand edit"
 docker exec "$APP" sh -c "$P /t/app/tests/integration/confirm_race_test.php" || exit 1
