@@ -23,6 +23,16 @@
     gap: 0.5rem;
 }
 
+/* admin-styles.css styles every <label> as a small uppercase form caption */
+.hf-pill,
+.question-section h3 label {
+    display: inline-block;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-transform: none;
+}
+
 .hf-pill {
     position: relative;
     cursor: pointer;
