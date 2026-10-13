@@ -212,6 +212,7 @@ function fmt_h($n) { return rtrim(rtrim(number_format((float) $n, 2), '0'), '.')
     </style>
 </head>
 <body>
+    <?php include __DIR__ . '/../../../_header.php'; ?>
     <?php include __DIR__ . '/../_admin_nav.php'; ?>
 
     <main class="admin-content">
