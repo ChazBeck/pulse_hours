@@ -9,8 +9,17 @@
  * Usage: php database/seed_fake_data.php
  */
 
+require_once __DIR__ . '/../scripts/cli_only.php';
+if (is_file(__DIR__ . '/../config/app_config.php')) {
+    require_once __DIR__ . '/../config/app_config.php';
+}
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../includes/date_helpers.php';
+
+if (defined('APP_ENV') && APP_ENV === 'production') {
+    fwrite(STDERR, "Seeding is disabled in production environment.\n");
+    exit(1);
+}
 
 function random_name() {
     $first = ['Alex','Sam','Jamie','Taylor','Jordan','Casey','Riley','Morgan','Drew','Cameron'];
@@ -28,7 +37,7 @@ try {
     $userIds = [];
     for ($i = 1; $i <= 5; $i++) {
         $email = "user{$i}@example.local";
-        $password = password_hash('password123', PASSWORD_DEFAULT);
+        $password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
         list($first, $last) = random_name();
 
         // Insert or get existing
@@ -46,12 +55,12 @@ try {
     }
 
     // Create an admin user if not exists
-    $adminEmail = 'admin@plusehours.com';
+    $adminEmail = 'admin@example.local';
     $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
     $stmt->execute([$adminEmail]);
     if (!$stmt->fetch()) {
         $stmt = $pdo->prepare("INSERT INTO users (email, password_hash, first_name, last_name, role, is_active) VALUES (?, ?, ?, ?, 'Admin', 1)");
-        $stmt->execute([$adminEmail, password_hash('admin123', PASSWORD_DEFAULT), 'Admin','User']);
+        $stmt->execute([$adminEmail, password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT), 'Admin','User']);
     }
 
     echo "Created users: " . implode(', ', $userIds) . "\n";

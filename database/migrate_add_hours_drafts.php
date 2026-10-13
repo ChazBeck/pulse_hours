@@ -15,6 +15,7 @@
  * Usage: php database/migrate_add_hours_drafts.php
  */
 
+require_once __DIR__ . '/../scripts/cli_only.php';
 require_once __DIR__ . '/../config/db_config.php';
 
 try {

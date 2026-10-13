@@ -12,6 +12,7 @@
  * finally creates the column it expects. NULL means "no estimate set".
  */
 
+require_once __DIR__ . '/../scripts/cli_only.php';
 require_once __DIR__ . '/../config/db_config.php';
 
 try {

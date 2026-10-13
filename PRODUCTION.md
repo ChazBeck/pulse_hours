@@ -47,12 +47,13 @@ chmod 600 config/app_config.php
 ### 3. Database Setup
 
 1. Import `/database/setup_database.sql` on production server
-2. Change default admin password immediately after first login
-3. Run:
+2. No users are seeded. Sign in through SSO; your user row is created on
+   first visit and the Admin role comes from your SSO account.
+3. If the database was created from an older copy of `setup_database.sql`,
+   remove the legacy seeded admin:
 ```sql
 DELETE FROM users WHERE email='admin@plusehours.com';
 ```
-Then create your own admin user with a secure password.
 
 ### 4. File Structure
 

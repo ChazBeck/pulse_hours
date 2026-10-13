@@ -1,7 +1,8 @@
 <?php
-require __DIR__ . '/auth/include/auth_include.php';
-auth_init();
-auth_require_admin();
+// CLI only: php scripts/check_internal_clients.php > report.html
+require __DIR__ . '/cli_only.php';
+require_once __DIR__ . '/../config/app_config.php';
+require_once __DIR__ . '/../config/db_config.php';
 
 $pdo = get_db_connection();
 

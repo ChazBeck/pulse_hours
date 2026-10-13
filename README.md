@@ -63,8 +63,8 @@ A comprehensive PHP/MySQL time tracking application with pulse check-ins, hours 
 
 5. **Access the application:**
    - Navigate to `http://localhost/plusehours/` (or your local URL)
-   - Login with default admin: `admin@plusehours.com` / `Admin123!`
-   - **Change this password immediately!**
+   - Sign in through Veerless SSO (or use the Docker local stack, which stubs SSO).
+     There is no built-in admin account: your user row is created on first visit.
 
 ### Production Deployment (cPanel)
 
@@ -118,10 +118,8 @@ A comprehensive PHP/MySQL time tracking application with pulse check-ins, hours 
    chmod 755 uploads/logos
    ```
 
-5. **Change default admin password:**
-   - Login at `https://yourdomain.com/auth/login.php`
-   - Go to Admin → Users
-   - Edit the admin user and set a strong password
+5. **Sign in through SSO.** No default account is created; users are
+   provisioned from SSO on first visit and the Admin role comes from SSO.
 
 6. **Enable auto-deployment** (optional):
    - In cPanel Git Version Control, click "Manage"
@@ -187,12 +185,23 @@ plusehours/
 - **[PRODUCTION.md](PRODUCTION.md)**: Production deployment checklist
 - **[DEPLOY.md](DEPLOY.md)**: cPanel-specific deployment guide
 
-## Default Credentials
+## Accounts
 
-**⚠️ IMPORTANT**: Change these immediately after installation!
+There are no default credentials. Sign-in is handled by Veerless SSO
+(`sso/sso_include.php`); the PulseHours password login is disabled.
 
-- Email: `admin@plusehours.com`
-- Password: `Admin123!`
+## Maintenance scripts
+
+One-off scripts live in `scripts/` and `database/` and refuse to run outside
+the CLI (`scripts/cli_only.php`). Run them on the server, for example:
+
+```bash
+php database/migrate_add_task_sort_order.php
+php scripts/check_internal_clients.php > /tmp/clients.html
+```
+
+nginx must also deny those directories: include
+`deploy/nginx/pulse-hardening.conf` in the `/pulse/` location (see that file).
 
 ## Updating (cPanel)
 

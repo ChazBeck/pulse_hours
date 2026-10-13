@@ -4,12 +4,13 @@
  * Tests all refactored repository methods to ensure they work correctly
  */
 
-require __DIR__ . '/auth/include/auth_include.php';
-auth_init();
-auth_require_admin();
+// CLI only: php scripts/test_repositories.php > report.html
+require __DIR__ . '/cli_only.php';
+require_once __DIR__ . '/../config/app_config.php';
+require_once __DIR__ . '/../config/db_config.php';
 
-require_once __DIR__ . '/src/Repository/autoload.php';
-require_once __DIR__ . '/includes/FilterBuilder.php';
+require_once __DIR__ . '/../src/Repository/autoload.php';
+require_once __DIR__ . '/../includes/FilterBuilder.php';
 
 $pdo = get_db_connection();
 
@@ -40,7 +41,7 @@ try {
     
     if (!$has_is_internal) {
         echo "<span style='color: #ef4444;'>❌ MISSING COLUMN: <code>is_internal</code> in clients table</span><br>";
-        echo "<strong>ACTION REQUIRED:</strong> Run migration at <a href='" . url('/run_migration.php') . "'>" . url('/run_migration.php') . "</a><br>";
+        echo "<strong>ACTION REQUIRED:</strong> Run <code>php database/migrate_add_is_internal.php</code><br>";
         $testsWarning++;
     } else {
         echo "<span style='color: #10b981;'>✓ Column <code>is_internal</code> exists</span><br>";
