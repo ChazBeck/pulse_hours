@@ -10,6 +10,7 @@
  * STANDARD_RATE — see includes/rates.php). NULL means "no senior portion".
  */
 
+require_once __DIR__ . '/../scripts/cli_only.php';
 require_once __DIR__ . '/../config/db_config.php';
 
 try {

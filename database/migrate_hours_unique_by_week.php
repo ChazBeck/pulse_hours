@@ -15,6 +15,7 @@
  * Usage: php database/migrate_hours_unique_by_week.php
  */
 
+require_once __DIR__ . '/../scripts/cli_only.php';
 require_once __DIR__ . '/../config/db_config.php';
 
 try {

@@ -20,6 +20,9 @@ docker run -d --name "$DB" --network "$NET" --tmpfs /var/lib/mysql \
 docker run -d --name "$APP" --network "$NET" -e TEST_DB_HOST="$DB" "$APP_IMAGE" sleep 600 >/dev/null
 docker exec "$APP" mkdir -p /t
 docker cp . "$APP":/t/app
+# db_config.php is not in git; use the example (prepend.php pre-defines its
+# constants) rather than whatever local copy the working tree happens to have.
+docker exec "$APP" cp /t/app/config/db_config.example.php /t/app/config/db_config.php
 
 for i in $(seq 1 60); do
   docker exec "$DB" mariadb -uroot -ptest -e 'select 1' plusehours >/dev/null 2>&1 && break
