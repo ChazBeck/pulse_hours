@@ -1,5 +1,9 @@
-<nav class="admin-nav">
-    <div class="admin-nav-container">
+<nav class="admin-nav" id="adminNav">
+    <!-- Phones only: the links collapse behind this button (see admin-nav-styles.css) -->
+    <button type="button" class="admin-nav-toggle" id="adminNavToggle" aria-expanded="false" aria-controls="adminNavLinks">
+        Admin menu <span class="admin-nav-caret">▾</span>
+    </button>
+    <div class="admin-nav-container" id="adminNavLinks">
         <a href="<?= url('/apps/admin/index.php') ?>" class="admin-nav-link <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
             Dashboard
         </a>
@@ -29,7 +33,7 @@
         </a>
         <div class="admin-nav-dropdown" id="reportsDropdown">
             <button type="button" class="<?= strpos($_SERVER['PHP_SELF'], '/reports/') !== false ? 'active' : '' ?>" id="reportsBtn">
-                Reports ▾
+                Reports <span class="admin-nav-caret">▾</span>
             </button>
             <div class="admin-nav-dropdown-content" id="reportsMenu">
                 <a href="<?= url('/apps/admin/reports/pulse-workload.php') ?>">Pulse & Workload</a>
@@ -52,6 +56,17 @@ if (btn) {
         dropdown.classList.toggle('open');
     });
 }
+
+// Phones: open/close the whole menu
+(function () {
+    const nav = document.getElementById('adminNav');
+    const toggle = document.getElementById('adminNavToggle');
+    if (!nav || !toggle) return;
+    toggle.addEventListener('click', function () {
+        const open = nav.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+})();
 
 // Close dropdown when clicking outside
 document.addEventListener('click', function(event) {

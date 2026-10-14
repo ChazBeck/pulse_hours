@@ -111,13 +111,105 @@
     color: var(--primary-color);
 }
 
+/* Phones only (see below) */
+.admin-nav-toggle {
+    display: none;
+}
+
+/* Phones: one "Admin menu" button that opens the links as a list. The bar
+   itself is ~1000px of nowrap links, which made phones zoom the page out. */
 @media (max-width: 768px) {
-    .admin-nav-container {
-        padding: 0 1rem;
+    .admin-nav {
+        /* Not sticky here: an open menu can be taller than the screen */
+        position: relative;
+        top: auto;
     }
 
-    .admin-nav-link {
+    .admin-nav-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 44px;
         padding: 0.75rem 1rem;
-        font-size: 0.8125rem;
+        background: none;
+        border: none;
+        font: inherit;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        color: var(--text-primary);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .admin-nav-toggle .admin-nav-caret {
+        transition: transform 0.2s;
+    }
+
+    .admin-nav.open .admin-nav-toggle .admin-nav-caret {
+        transform: rotate(180deg);
+    }
+
+    .admin-nav-container {
+        display: none;
+        flex-direction: column;
+        gap: 0;
+        padding: 0 0 0.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .admin-nav.open .admin-nav-container {
+        display: flex;
+    }
+
+    .admin-nav-link,
+    .admin-nav-dropdown-content a {
+        padding: 0.75rem 1rem;
+        min-height: 44px;
+        font-size: 0.9375rem;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+    }
+
+    .admin-nav-link.active {
+        border-bottom-color: transparent;
+        border-left-color: var(--primary-color);
+        background: var(--gray-50);
+    }
+
+    /* Reports: shown as a labelled group, always open, not a dropdown */
+    .admin-nav-dropdown {
+        display: block;
+    }
+
+    .admin-nav-dropdown > button {
+        width: 100%;
+        text-align: left;
+        padding: 0.75rem 1rem 0.25rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: none;
+        pointer-events: none;
+    }
+
+    .admin-nav-dropdown > button .admin-nav-caret {
+        display: none;
+    }
+
+    .admin-nav-dropdown-content,
+    .admin-nav-dropdown.open .admin-nav-dropdown-content {
+        display: block;
+        position: static;
+        min-width: 0;
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .admin-nav-dropdown-content a {
+        padding-left: 1.75rem;
+        white-space: normal;
     }
 }
