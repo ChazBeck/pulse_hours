@@ -101,6 +101,34 @@ function high_fives_given(PDO $pdo, int $giverId, string $yearWeek): array
     return $rows;
 }
 
+/**
+ * The High Fives a user received for a Pulse week, newest first, each with
+ * 'giver' (name) and 'others' (the other recipients' names, joined; '' if none).
+ */
+function high_fives_received(PDO $pdo, int $userId, string $yearWeek): array
+{
+    $stmt = $pdo->prepare("
+        SELECT hf.id, hf.message, hf.created_at,
+               CONCAT(g.first_name, ' ', g.last_name) AS giver,
+               GROUP_CONCAT(CASE WHEN o.id <> ? THEN CONCAT(o.first_name, ' ', o.last_name) END
+                            ORDER BY o.first_name, o.last_name SEPARATOR '|') AS others
+        FROM high_fives hf
+        JOIN high_five_recipients me ON me.high_five_id = hf.id AND me.user_id = ?
+        JOIN users g ON g.id = hf.giver_user_id
+        JOIN high_five_recipients r ON r.high_five_id = hf.id
+        JOIN users o ON o.id = r.user_id
+        WHERE hf.year_week = ?
+        GROUP BY hf.id
+        ORDER BY hf.created_at DESC, hf.id DESC
+    ");
+    $stmt->execute([$userId, $userId, $yearWeek]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows as &$row) {
+        $row['others'] = $row['others'] === null ? '' : high_fives_join_names(explode('|', $row['others']));
+    }
+    return $rows;
+}
+
 /** "Ann", "Ann and Katie", "Ann, Katie and Kristen". */
 function high_fives_join_names(array $names): string
 {

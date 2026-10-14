@@ -92,6 +92,26 @@ check($s === 302 && str_ends_with($loc, '/apps/hours.php') && $count() === 2, 'N
 [, , $html] = req('GET', '/apps/high-fives.php');
 check(substr_count($html, '🙌 ') === 2, 'both are listed as this week\'s');
 
+// --- the weekly summary shows the week's High Fives, given and received
+[, , $html] = req('GET', '/apps/summary.php');
+check(str_contains($html, '<h2>High Fives</h2>') && str_contains($html, 'No High Fives given or received') === false,
+    'the summary has a High Fives card');
+check(str_contains($html, 'You gave') && str_contains($html, 'To Ann Thomas and Katie Yoder') && str_contains($html, 'Covered my call'),
+    "it lists what charlie gave this week");
+check(!str_contains($html, 'You received'), 'nothing received yet, so no received list');
+$give = function (int $from, array $to, string $week, string $msg) use ($pdo) {
+    $pdo->prepare("INSERT INTO high_fives (giver_user_id, year_week, message) VALUES (?, ?, ?)")->execute([$from, $week, $msg]);
+    $id = (int) $pdo->lastInsertId();
+    foreach ($to as $u) $pdo->prepare("INSERT INTO high_five_recipients VALUES (?, ?)")->execute([$id, $u]);
+};
+$give(103, [101, 104], '2026-16', 'Great client call, both of you');
+$give(104, [101], '2026-15', 'Last week thing');
+[, , $html] = req('GET', '/apps/summary.php');
+check(str_contains($html, 'You received') && str_contains($html, 'From Ann Thomas (also to Katie Yoder)')
+    && str_contains($html, 'Great client call, both of you'), 'it lists what charlie received, and who else got it');
+check(!str_contains($html, 'Last week thing'), "another week's High Five is not shown");
+check(str_contains($html, '/apps/high-fives.php'), 'it links to give a High Five');
+
 // --- the check-in now leads here (last: it adds a check-in for the real current week)
 [, , $html] = req('GET', '/apps/pulse.php');
 [$s, $loc] = req('POST', '/apps/pulse.php', ['week_selection' => 'this_week', 'pulse' => 4, 'work_load' => 5]);

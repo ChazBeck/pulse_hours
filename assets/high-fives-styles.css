@@ -155,3 +155,27 @@
         align-items: stretch;
     }
 }
+
+/* Weekly Summary page card */
+.hf-summary-empty {
+    padding: 1.5rem;
+}
+
+.summary-card .hf-given:first-of-type {
+    margin-top: 0;
+}
+
+.hf-summary-link {
+    margin-top: 1rem;
+    text-align: right;
+}
+
+.hf-summary-link a {
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.hf-summary-link a:hover {
+    text-decoration: underline;
+}

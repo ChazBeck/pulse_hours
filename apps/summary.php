@@ -9,6 +9,7 @@ require __DIR__ . '/../sso/sso_include.php';
 /* SSO enforced in sso_include.php */
 
 require_once __DIR__ . '/../includes/date_helpers.php';
+require_once __DIR__ . '/../includes/high_fives.php';
 
 // $user provided by sso_include.php
 $pdo = get_db_connection();
@@ -27,6 +28,11 @@ if (!$pulse_entry) {
 $target_year_week = $pulse_entry['year_week'];
 
 $week_label = format_week_range($target_year_week);
+
+// High Fives given and received this week (none until the migration has run)
+$high_fives_on = high_fives_enabled($pdo);
+$high_fives_given = $high_fives_on ? high_fives_given($pdo, (int) $user['id'], $target_year_week) : [];
+$high_fives_received = $high_fives_on ? high_fives_received($pdo, (int) $user['id'], $target_year_week) : [];
 
 // Get all hours logged for this week
 $stmt = $pdo->prepare("
@@ -87,6 +93,7 @@ foreach ($hours_entries as $entry) {
     <link rel="stylesheet" href="<?= url('/assets/admin-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('/assets/admin-nav-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('/assets/summary-styles.css') ?>">
+    <link rel="stylesheet" href="<?= url('/assets/high-fives-styles.css') ?>">
 </head>
 <body>
     <?php include __DIR__ . '/../_header.php'; ?>
@@ -118,6 +125,52 @@ foreach ($hours_entries as $entry) {
                     </div>
                 </div>
             </div>
+
+            <?php if ($high_fives_on): ?>
+            <!-- High Fives -->
+            <div class="summary-card">
+                <h2>High Fives</h2>
+
+                <?php if (!$high_fives_given && !$high_fives_received): ?>
+                    <div class="empty-state hf-summary-empty">
+                        <div class="empty-state-icon">🙌</div>
+                        <p>No High Fives given or received this week.</p>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($high_fives_received): ?>
+                    <div class="hf-given">
+                        <h3>You received</h3>
+                        <ul>
+                            <?php foreach ($high_fives_received as $hf): ?>
+                                <li>
+                                    <strong>🙌 From <?= htmlspecialchars($hf['giver']) ?><?= $hf['others'] !== '' ? ' (also to ' . htmlspecialchars($hf['others']) . ')' : '' ?></strong>
+                                    <p><?= nl2br(htmlspecialchars($hf['message'])) ?></p>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($high_fives_given): ?>
+                    <div class="hf-given">
+                        <h3>You gave</h3>
+                        <ul>
+                            <?php foreach ($high_fives_given as $hf): ?>
+                                <li>
+                                    <strong>🙌 To <?= htmlspecialchars($hf['recipients']) ?></strong>
+                                    <p><?= nl2br(htmlspecialchars($hf['message'])) ?></p>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
+                <div class="hf-summary-link">
+                    <a href="<?= url('/apps/high-fives.php') ?>">Give a High Five</a>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Hours Summary -->
             <div class="summary-card">
