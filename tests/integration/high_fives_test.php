@@ -86,6 +86,10 @@ check(str_contains($html, 'High Five sent to Ann Thomas and Katie Yoder!'), 'the
 check(str_contains($html, 'Your High Fives this week') && str_contains($html, 'Thanks for &lt;the&gt; Medica deck!<br />'),
     'it is listed below, escaped');
 check(!preg_match('/value="10[34]"\s+checked/', $html) && !str_contains($html, '>  Thanks'), 'the form is cleared for the next one');
+check(str_contains($html, '<form method="POST" action="/apps/high-fives.php"'), 'the form posts to the plain page, not back to ?sent=');
+[, , $html] = req('POST', parse_url($loc, PHP_URL_PATH) . '?' . parse_url($loc, PHP_URL_QUERY), ['csrf_token' => $csrf, 'action' => 'next', 'recipients' => [103]]);
+check(str_contains($html, 'Write a line about what they did') && !str_contains($html, 'High Five sent to'),
+    'a mistake on the next one does not show the previous one\'s "sent" banner');
 
 // --- Next with a filled form: saves, then on to hours
 [$s, $loc] = req('POST', '/apps/high-fives.php', ['csrf_token' => $csrf, 'action' => 'next', 'recipients' => [103], 'message' => 'Covered my call']);

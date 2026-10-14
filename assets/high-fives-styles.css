@@ -36,6 +36,7 @@
 .hf-pill {
     position: relative;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .hf-pill[hidden] {
@@ -171,6 +172,8 @@
 }
 
 .hf-summary-link a {
+    display: inline-block;
+    padding: 0.6rem 0;
     color: var(--primary-color);
     font-weight: 600;
     text-decoration: none;

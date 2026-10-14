@@ -99,7 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $teammates = high_fives_teammates($pdo, (int) $user['id']);
 $given = high_fives_given($pdo, (int) $user['id'], $target_year_week);
 
-if (isset($_GET['sent'])) {
+// Only on the page load after a send, never alongside a later form's result
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['sent'])) {
     foreach ($given as $hf) {
         if ((int) $hf['id'] === (int) $_GET['sent']) {
             $success_message = '🙌 High Five sent to ' . $hf['recipients'] . '!';
@@ -138,7 +139,7 @@ if (isset($_GET['sent'])) {
             <?php endif; ?>
 
             <div class="pulse-card">
-                <form method="POST" action="" id="highFiveForm">
+                <form method="POST" action="<?= url('/apps/high-fives.php') ?>" id="highFiveForm">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(auth_csrf_token()) ?>">
 
                     <div class="hf-intro">
