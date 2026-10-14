@@ -45,6 +45,8 @@ echo "--- migration, second run (must change nothing)"
 docker exec "$APP" sh -c "$P /t/app/database/migrate_add_hours_drafts.php"
 echo "--- week-key migration, twice"
 docker exec "$APP" sh -c "$P /t/app/database/migrate_hours_unique_by_week.php && $P /t/app/database/migrate_hours_unique_by_week.php"
+echo "--- high fives migration, twice"
+docker exec "$APP" sh -c "$P /t/app/database/migrate_add_high_fives.php && $P /t/app/database/migrate_add_high_fives.php"
 docker exec -i "$DB" mariadb -uroot -ptest plusehours < tests/integration/seed.sql
 
 # Tokens: the file holds only hashes.
@@ -54,13 +56,19 @@ docker exec "$APP" sh -c "printf 'cos-168 %s\ncos-168 %s charlie@veerless.com\n'
 # test-only stub logs in as charlie@veerless.com, who has a check-in for the week.
 docker exec "$APP" sh -c "sed \"s#define('BASE_URL', '/pulse/')#define('BASE_URL', '/')#\" /t/app/config/app_config.example.php > /t/app/config/app_config.php"
 docker exec "$DB" mariadb -uroot -ptest plusehours -e "INSERT INTO pulse (user_id, year_week, pulse, work_load) VALUES (101, '2026-16', 3, 5)"
-docker exec -d "$APP" sh -c "cd /t/app && PULSE_API_TOKENS_FILE=/t/tokens SSO_JWT_INCLUDE=/t/app/tests/integration/sso_stub.php LOCAL_DEV_USER_EMAIL=charlie@veerless.com $P -S 127.0.0.1:8099 >/t/server.log 2>&1"
+# A fake Zoom Incoming Webhook for High Fives, and the credentials file naming it
+docker exec "$APP" sh -c "printf 'ZOOM_WEBHOOK_ENDPOINT=http://127.0.0.1:8097/inc/hook\nZOOM_WEBHOOK_TOKEN=test-zoom-token\n' > /t/zoom.env && : > /t/zoom-requests.jsonl"
+docker exec -d "$APP" sh -c "php -S 127.0.0.1:8097 /t/app/tests/integration/fake_zoom.php >/t/zoom.log 2>&1"
+docker exec -d "$APP" sh -c "cd /t/app && PULSE_ZOOM_HIGH_FIVES_FILE=/t/zoom.env PULSE_API_TOKENS_FILE=/t/tokens SSO_JWT_INCLUDE=/t/app/tests/integration/sso_stub.php LOCAL_DEV_USER_EMAIL=charlie@veerless.com $P -S 127.0.0.1:8099 >/t/server.log 2>&1"
 sleep 1
 echo "--- drafts flow"
 docker exec "$APP" sh -c "TEST_BASE=http://127.0.0.1:8099 TEST_TOKEN=test-token $P /t/app/tests/integration/drafts_flow_test.php" || {
   echo "--- server log"; docker exec "$APP" cat /t/server.log; exit 1; }
 echo "--- hours page"
 docker exec "$APP" sh -c "TEST_BASE=http://127.0.0.1:8099 TEST_TOKEN=test-token $P /t/app/tests/integration/hours_page_test.php" || {
+  echo "--- server log"; docker exec "$APP" tail -40 /t/server.log; exit 1; }
+echo "--- high fives"
+docker exec "$APP" sh -c "TEST_BASE=http://127.0.0.1:8099 $P /t/app/tests/integration/high_fives_test.php" || {
   echo "--- server log"; docker exec "$APP" tail -40 /t/server.log; exit 1; }
 echo "--- confirm vs. a concurrent hand edit"
 docker exec "$APP" sh -c "$P /t/app/tests/integration/confirm_race_test.php" || exit 1

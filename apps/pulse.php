@@ -91,8 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$user['id'], $year_week, $pulse, $work_load]);
             }
             
-            // Redirect to hours entry page
-            header('Location: ' . url('/apps/hours.php'));
+            // On to High Fives (which steps aside to the hours page until its migration has run)
+            header('Location: ' . url('/apps/high-fives.php'));
             exit;
             
         } catch (PDOException $e) {

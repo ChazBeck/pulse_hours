@@ -1,0 +1,184 @@
+/* High Fives Page Styles (builds on pulse-styles.css) */
+
+.hf-intro {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.hf-intro h2 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.hf-intro p {
+    color: var(--text-secondary);
+}
+
+/* Teammate pills: tap to pick, tap again to unpick; pick as many as you like */
+.hf-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* admin-styles.css styles every <label> as a small uppercase form caption */
+.hf-pill,
+.question-section h3 label {
+    display: inline-block;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-transform: none;
+}
+
+.hf-pill {
+    position: relative;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.hf-pill[hidden] {
+    display: none;
+}
+
+/* The checkbox stays focusable for the keyboard, just not visible */
+.hf-pill input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.hf-pill span {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--gray-300);
+    border-radius: 999px;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: white;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.hf-pill:hover span {
+    border-color: var(--primary-color);
+}
+
+.hf-pill input:checked + span {
+    border-color: var(--primary-color);
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 8px rgba(229, 131, 37, 0.3);
+}
+
+.hf-pill input:checked + span::before {
+    content: "✓ ";
+}
+
+.hf-pill input:focus-visible + span {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
+}
+
+.hf-filter,
+.hf-message {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.hf-filter {
+    margin-bottom: 0.75rem;
+}
+
+.hf-message {
+    resize: vertical;
+}
+
+.hf-filter:focus,
+.hf-message:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(229, 131, 37, 0.15);
+}
+
+/* Back | Give another | Next */
+.hf-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}
+
+.hf-actions .btn {
+    text-align: center;
+}
+
+/* What you've already given this week */
+.hf-given {
+    margin-top: 1.5rem;
+}
+
+.hf-given h3 {
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.hf-given ul {
+    list-style: none;
+}
+
+.hf-given li {
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--primary-color);
+    background: var(--gray-50);
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    margin-bottom: 0.5rem;
+}
+
+.hf-given li p {
+    margin-top: 0.25rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+    .hf-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+}
+
+/* Weekly Summary page card */
+.hf-summary-empty {
+    padding: 1.5rem;
+}
+
+.summary-card .hf-given:first-of-type {
+    margin-top: 0;
+}
+
+.hf-summary-link {
+    margin-top: 1rem;
+    text-align: right;
+}
+
+.hf-summary-link a {
+    display: inline-block;
+    padding: 0.6rem 0;
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.hf-summary-link a:hover {
+    text-decoration: underline;
+}
