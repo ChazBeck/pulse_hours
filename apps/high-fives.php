@@ -150,8 +150,7 @@ if (isset($_GET['sent'])) {
                     <div class="question-section">
                         <h3><label for="hfMessage">What did they do?</label></h3>
                         <textarea id="hfMessage" name="message" class="hf-message" rows="4"
-                            maxlength="<?= HIGH_FIVE_MAX_LENGTH ?>"
-                            placeholder="e.g. Thanks for jumping in on the client deck Friday — it made the meeting."><?= htmlspecialchars($message) ?></textarea>
+                            maxlength="<?= HIGH_FIVE_MAX_LENGTH ?>"><?= htmlspecialchars($message) ?></textarea>
                     </div>
 
                     <div class="hf-actions">
