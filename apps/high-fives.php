@@ -12,6 +12,7 @@ require __DIR__ . '/../sso/sso_include.php';
 
 require_once __DIR__ . '/../includes/date_helpers.php';
 require_once __DIR__ . '/../includes/high_fives.php';
+require_once __DIR__ . '/../includes/high_fives_zoom.php';
 
 // $user provided by sso_include.php
 $pdo = get_db_connection();
@@ -68,8 +69,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     } elseif ($action === 'next' || $action === 'another') {
         try {
-            $id = high_fives_give($pdo, (int) $user['id'], $target_year_week, $selected_ids, $message);
+            $zoom = high_fives_zoom_config();
+            $id = high_fives_give($pdo, (int) $user['id'], $target_year_week, $selected_ids, $message, $zoom !== null);
             header('Location: ' . url($action === 'next' ? '/apps/hours.php' : '/apps/high-fives.php?sent=' . $id));
+            if ($zoom) {
+                // Let the browser move on, then post: a slow Zoom never holds up the click.
+                // The session is released first, or the next page would wait on its lock.
+                // A failure is recorded and retried by scripts/post_high_fives.php.
+                session_write_close();
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+                try {
+                    high_fives_zoom_post($pdo, $id, $zoom);
+                } catch (Throwable $e) {
+                    error_log('high-fives.php Zoom post: ' . $e->getMessage());
+                }
+            }
             exit();
         } catch (InvalidArgumentException $e) {
             $error_message = $e->getMessage();

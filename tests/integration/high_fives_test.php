@@ -6,6 +6,7 @@
  */
 require __DIR__ . '/../../config/db_config.php';
 require __DIR__ . '/../../config/app_config.php';
+require __DIR__ . '/../../includes/high_fives_zoom.php';
 $base = getenv('TEST_BASE');
 $fail = 0;
 function check(bool $ok, string $what): void { global $fail; echo ($ok ? "ok   " : "FAIL ") . $what . "\n"; if (!$ok) $fail++; }
@@ -111,6 +112,69 @@ check(str_contains($html, 'You received') && str_contains($html, 'From Ann Thoma
     && str_contains($html, 'Great client call, both of you'), 'it lists what charlie received, and who else got it');
 check(!str_contains($html, 'Last week thing'), "another week's High Five is not shown");
 check(str_contains($html, '/apps/high-fives.php'), 'it links to give a High Five');
+
+// --- Zoom: every High Five given while Zoom is set up is posted, once
+$zoomRequests = fn () => array_map(fn ($l) => json_decode($l, true), file('/t/zoom-requests.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
+$status = fn (int $id) => $pdo->query("SELECT zoom_status, zoom_attempts, zoom_error FROM high_fives WHERE id = $id")->fetch(PDO::FETCH_ASSOC);
+$reqs = $zoomRequests();
+check(count($reqs) === 2, 'the two High Fives given on the page were each posted to Zoom once: ' . count($reqs));
+$first = $reqs[0] ?? [];
+check(($first['uri'] ?? '') === '/inc/hook?format=full' && ($first['authorization'] ?? '') === 'test-zoom-token'
+    && ($first['content_type'] ?? '') === 'application/json', 'it posts a full card to the endpoint with the token');
+check(($first['body']['head']['text'] ?? '') === '🙌 High Five'
+    && ($first['body']['body'][0]['text'] ?? '') === 'Charlie Beck → Ann Thomas and Katie Yoder'
+    && ($first['body']['body'][1]['text'] ?? '') === "Thanks for <the> Medica deck!\nIt landed.",
+    'the card says who gave it, to whom, and the message: ' . json_encode($first['body'] ?? null, JSON_UNESCAPED_UNICODE));
+$posted = $pdo->query("SELECT COUNT(*) FROM high_fives WHERE zoom_status = 'posted' AND zoom_attempts = 1 AND zoom_posted_at IS NOT NULL")->fetchColumn();
+check($posted == 2, 'both are recorded as posted, on the first attempt');
+check($pdo->query("SELECT COUNT(*) FROM high_fives WHERE giver_user_id <> 101 AND zoom_status = 'off'")->fetchColumn() == 2,
+    'High Fives saved without Zoom (here, straight into the table) are off');
+
+$retry = fn () => shell_exec(PHP_BINARY . ' -d auto_prepend_file=/t/app/tests/integration/prepend.php /t/app/scripts/post_high_fives.php /t/zoom.env 2>&1; echo "exit=$?"');
+$out = $retry();
+check(count($zoomRequests()) === 2 && str_contains($out, 'exit=0'), 'the retry script posts nothing already posted, nor anything off: ' . trim($out));
+
+// Zoom down: the High Five is still saved and the user still moves on; the retry script posts it later
+file_put_contents('/t/zoom-mode', 'down');
+[$s, $loc] = req('POST', '/apps/high-fives.php', ['csrf_token' => $csrf, 'action' => 'next', 'recipients' => [104], 'message' => 'Posted later']);
+$downId = (int) $pdo->query("SELECT MAX(id) FROM high_fives")->fetchColumn();
+$st = $status($downId);
+check($s === 302 && str_ends_with($loc, '/apps/hours.php'), 'with Zoom down, Next still goes on to hours');
+check($st['zoom_status'] === 'failed' && $st['zoom_attempts'] == 1 && str_starts_with((string) $st['zoom_error'], 'HTTP 500'),
+    'the High Five is saved and marked failed, with the reason: ' . json_encode($st));
+$out = $retry();
+check(str_contains($out, "High Five $downId: failed") && str_contains($out, 'exit=1'), 'while Zoom is still down the retry fails, and says so');
+file_put_contents('/t/zoom-mode', 'ok');
+$before = count($zoomRequests());
+$out = $retry();
+$st = $status($downId);
+check(str_contains($out, "High Five $downId: posted") && str_contains($out, 'exit=0') && $st['zoom_status'] === 'posted' && $st['zoom_attempts'] == 3,
+    'once Zoom is back the retry script posts it: ' . json_encode($st));
+check(count($zoomRequests()) === $before + 1, 'exactly one more post');
+check(high_fives_zoom_post($pdo, $downId, high_fives_zoom_config('/t/zoom.env')) === 'skipped' && count($zoomRequests()) === $before + 1,
+    'a posted High Five cannot be posted again');
+
+// A post left mid-send is retried once it is clearly stuck, but not while it may still be in flight
+$pdo->exec("UPDATE high_fives SET zoom_status = 'sending', zoom_attempted_at = CURRENT_TIMESTAMP WHERE id = $downId");
+$retry();
+check(count($zoomRequests()) === $before + 1, 'a fresh in-flight post is left alone');
+$pdo->exec("UPDATE high_fives SET zoom_attempted_at = CURRENT_TIMESTAMP - INTERVAL 11 MINUTE WHERE id = $downId");
+$retry();
+check(count($zoomRequests()) === $before + 2 && $status($downId)['zoom_status'] === 'posted', 'a post stuck for over 10 minutes is retried');
+
+// Out of attempts: left as failed, never retried again
+$pdo->exec("UPDATE high_fives SET zoom_status = 'failed', zoom_attempts = 10 WHERE id = $downId");
+$retry();
+check(count($zoomRequests()) === $before + 2 && $status($downId)['zoom_status'] === 'failed', 'after 10 attempts it is no longer retried');
+
+// Config: no file, or an incomplete one, means Zoom is off
+file_put_contents('/t/zoom-incomplete.env', "ZOOM_WEBHOOK_ENDPOINT=http://x\n");
+check(high_fives_zoom_config('/t/nope.env') === null && high_fives_zoom_config('/t/zoom-incomplete.env') === null
+    && high_fives_zoom_config('') === null, 'no or incomplete credentials file means Zoom is off');
+$offId = high_fives_give($pdo, 101, '2026-16', [103], 'Given with Zoom off');
+check($status($offId)['zoom_status'] === 'off', 'a High Five given with Zoom off is saved as off');
+$out = shell_exec(PHP_BINARY . ' -d auto_prepend_file=/t/app/tests/integration/prepend.php /t/app/scripts/post_high_fives.php /t/nope.env 2>&1; echo "exit=$?"');
+check(str_contains($out, 'Zoom is not set up') && str_contains($out, 'exit=0'), 'the retry script does nothing without credentials');
 
 // --- the check-in now leads here (last: it adds a check-in for the real current week)
 [, , $html] = req('GET', '/apps/pulse.php');

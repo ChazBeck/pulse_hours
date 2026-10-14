@@ -35,11 +35,13 @@ function high_fives_teammates(PDO $pdo, int $selfId): array
 }
 
 /**
- * Save a High Five and return its id.
+ * Save a High Five and return its id. With $forZoom it is queued for posting to
+ * the team's Zoom channel (zoom_status 'pending'); without, it is never posted
+ * ('off'), so turning Zoom on later does not post old High Fives.
  *
  * @throws InvalidArgumentException with a message fit to show the user
  */
-function high_fives_give(PDO $pdo, int $giverId, string $yearWeek, array $recipientIds, string $message): int
+function high_fives_give(PDO $pdo, int $giverId, string $yearWeek, array $recipientIds, string $message, bool $forZoom = false): int
 {
     $message = trim($message);
     $ids = array_values(array_unique(array_map('intval', $recipientIds)));
@@ -60,8 +62,8 @@ function high_fives_give(PDO $pdo, int $giverId, string $yearWeek, array $recipi
 
     $pdo->beginTransaction();
     try {
-        $pdo->prepare("INSERT INTO high_fives (giver_user_id, year_week, message) VALUES (?, ?, ?)")
-            ->execute([$giverId, $yearWeek, $message]);
+        $pdo->prepare("INSERT INTO high_fives (giver_user_id, year_week, message, zoom_status) VALUES (?, ?, ?, ?)")
+            ->execute([$giverId, $yearWeek, $message, $forZoom ? 'pending' : 'off']);
         $id = (int) $pdo->lastInsertId();
         $add = $pdo->prepare("INSERT INTO high_five_recipients (high_five_id, user_id) VALUES (?, ?)");
         foreach ($ids as $uid) {

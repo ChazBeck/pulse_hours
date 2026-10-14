@@ -319,7 +319,13 @@ CREATE TABLE IF NOT EXISTS `high_fives` (
     `year_week` VARCHAR(10) NOT NULL,
     `message` TEXT NOT NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `zoom_status` VARCHAR(10) NOT NULL DEFAULT 'off',
+    `zoom_attempts` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    `zoom_attempted_at` TIMESTAMP NULL DEFAULT NULL,
+    `zoom_posted_at` TIMESTAMP NULL DEFAULT NULL,
+    `zoom_error` VARCHAR(255) NULL DEFAULT NULL,
     INDEX `idx_giver_week` (`giver_user_id`, `year_week`),
+    INDEX `idx_zoom_status` (`zoom_status`),
     INDEX `idx_year_week` (`year_week`),
     CONSTRAINT `fk_hf_giver_user_id` FOREIGN KEY (`giver_user_id`)
         REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
