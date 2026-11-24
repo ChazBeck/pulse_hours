@@ -19,8 +19,8 @@ require_once __DIR__ . '/../../../src/Repository/autoload.php';
 $hoursRepo = new HoursRepository($pdo);
 $clientRepo = new ClientRepository($pdo);
 
-// Get selected week or default to current week
-$selectedWeek = isset($_GET['week']) ? $_GET['week'] : date('o-W');
+// Get selected week or default to the prior week (reports are pulled for last week)
+$selectedWeek = isset($_GET['week']) ? $_GET['week'] : (new DateTime())->modify('-1 week')->format('o-W');
 
 // Get week dates (returns DateTime objects)
 $weekDates = get_week_dates($selectedWeek);
