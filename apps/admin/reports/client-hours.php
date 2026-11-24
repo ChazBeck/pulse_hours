@@ -230,6 +230,7 @@ foreach ($clientTotals as $item) {
     <link rel="stylesheet" href="<?= url('assets/admin-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('assets/admin-nav-styles.css') ?>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="<?= url('assets/chart-export.js') ?>"></script>
     <style>
         .reports-container {
             padding: 2rem;
@@ -340,6 +341,8 @@ foreach ($clientTotals as $item) {
                 <p class="date-range">
                     <?= $startDate->format('M j, Y') ?> - <?= $endDate->format('M j, Y') ?>
                 </p>
+
+                <button type="button" id="downloadChartsBtn" class="btn btn-primary">Download charts (JPEG)</button>
             </div>
             
             <!-- Client Hours Stacked Bar Chart -->
@@ -371,7 +374,7 @@ foreach ($clientTotals as $item) {
         
         const datasets = <?= json_encode($displayDatasets) ?>;
         
-        new Chart(ctx, {
+        const clientHoursChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: <?= json_encode($userLabels) ?>,
@@ -464,7 +467,7 @@ foreach ($clientTotals as $item) {
         // Total Hours by Client Chart
         const ctxTotals = document.getElementById('clientTotalsChart').getContext('2d');
         
-        new Chart(ctxTotals, {
+        const clientTotalsChart = new Chart(ctxTotals, {
             type: 'bar',
             data: {
                 labels: <?= json_encode($clientNames) ?>,
@@ -543,6 +546,33 @@ foreach ($clientTotals as $item) {
                 }
             }
         });
+
+        // Download both charts as JPEGs for reports: no titles; the team
+        // member chart keeps its key. The charts on this page are not changed.
+        document.getElementById('downloadChartsBtn').addEventListener('click', function () {
+            const btn = this;
+            const label = btn.textContent;
+            const week = <?= json_encode($selectedWeek) ?>;
+            // Laid out at the on-screen chart width so text keeps its proportions.
+            const exportOptions = { mode: 'clone', layoutWidth: 770 };
+            btn.disabled = true;
+            btn.textContent = 'Preparing…';
+            PulseChartExport.downloadChartsAsJpeg([
+                { chart: clientHoursChart, filename: 'hours-by-team-member_' + week + '.jpg',
+                  options: Object.assign({ legend: true }, exportOptions) },
+                { chart: clientTotalsChart, filename: 'total-hours-by-client_' + week + '.jpg',
+                  options: Object.assign({ legend: false }, exportOptions) }
+            ], CHART_EXPORT_WIDTH_IN, CHART_EXPORT_HEIGHT_IN, 300).catch(function (err) {
+                console.error(err);
+                alert('Sorry, the charts could not be downloaded.');
+            }).finally(function () {
+                btn.disabled = false;
+                btn.textContent = label;
+            });
+        });
+        // Printed size of each downloaded image, in inches.
+        const CHART_EXPORT_WIDTH_IN = 7.5;
+        const CHART_EXPORT_HEIGHT_IN = 5;
     </script>
 </body>
 </html>
