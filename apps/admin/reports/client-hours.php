@@ -548,8 +548,8 @@ foreach ($clientTotals as $item) {
         });
 
         // Printed size of each downloaded image, in inches (width x height).
-        const CHART_EXPORT_WIDTH_IN = 4.8;
-        const CHART_EXPORT_HEIGHT_IN = 5.8;
+        const CHART_EXPORT_WIDTH_IN = 5.8;
+        const CHART_EXPORT_HEIGHT_IN = 4.8;
 
         // Download both charts as JPEGs for reports: no titles; the team
         // member chart keeps its key. The charts on this page are not changed.
