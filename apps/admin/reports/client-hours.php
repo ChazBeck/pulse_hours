@@ -558,7 +558,12 @@ foreach ($clientTotals as $item) {
             const label = btn.textContent;
             const week = <?= json_encode($selectedWeek) ?>;
             // ~103 CSS px per printed inch keeps the text at a readable size.
-            const exportOptions = { mode: 'clone', layoutWidth: Math.round(CHART_EXPORT_WIDTH_IN * 103) };
+            // Smaller axis text than on screen: the images go on slides.
+            const exportOptions = {
+                mode: 'clone',
+                layoutWidth: Math.round(CHART_EXPORT_WIDTH_IN * 103),
+                axisFont: { ticks: 9, title: 10 }
+            };
             btn.disabled = true;
             btn.textContent = 'Preparing…';
             PulseChartExport.downloadChartsAsJpeg([

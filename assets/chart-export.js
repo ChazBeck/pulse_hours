@@ -122,6 +122,18 @@
         options.plugins.tooltip = { enabled: false };
         options.plugins.legend = options.plugins.legend || {};
         options.plugins.legend.display = !!opts.legend;
+        // Optional smaller axis text for the image: { ticks, title } in px.
+        if (opts.axisFont && options.scales) {
+            Object.keys(options.scales).forEach(function (id) {
+                var sc = options.scales[id];
+                if (sc.ticks && opts.axisFont.ticks) {
+                    sc.ticks.font = Object.assign({}, sc.ticks.font, { size: opts.axisFont.ticks });
+                }
+                if (sc.title && opts.axisFont.title) {
+                    sc.title.font = Object.assign({}, sc.title.font, { size: opts.axisFont.title });
+                }
+            });
+        }
         // Optional smaller key for the image: { size, boxWidth, padding }.
         if (opts.legend && opts.legendStyle) {
             var labels = options.plugins.legend.labels = options.plugins.legend.labels || {};
@@ -175,6 +187,8 @@
      *   legend: for 'clone', keep the key.
      *   legendStyle: for 'clone' with legend, { size, boxWidth, padding }
      *         to draw a smaller key than on screen.
+     *   axisFont: for 'clone', { ticks, title } px sizes for the axis
+     *         labels and axis names (on screen: 12 and 14).
      *   layoutWidth: CSS px width to lay the copy out at (sets text size
      *         relative to the image; default LAYOUT_CSS_WIDTH).
      * Resolves to a Blob.
