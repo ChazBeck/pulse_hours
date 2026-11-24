@@ -60,6 +60,36 @@ foreach ($yearWeeks as $yw) {
 // Get individual user workload data using repository
 $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
 
+// Latest week on the charts (the last point), for the tables under each chart
+$latestWeekLabel = end($weekLabels);
+$latestIndex = count($yearWeeks) - 1;
+
+/**
+ * Rows for a latest-week table: each person's value for the last chart week
+ * (null when they did not check in that week), sorted by name.
+ */
+function latest_week_rows(array $userData, int $index): array {
+    $rows = [];
+    foreach ($userData as $user) {
+        $rows[] = ['name' => $user['name'], 'value' => $user['chartData'][$index] ?? null];
+    }
+    usort($rows, function ($a, $b) { return strcasecmp($a['name'], $b['name']); });
+    return $rows;
+}
+
+/** Format a rating: up to 2 decimals, trailing zeros dropped; a dash when missing. */
+function format_rating($value): string {
+    if ($value === null) {
+        return '—';
+    }
+    return rtrim(rtrim(number_format((float)$value, 2, '.', ''), '0'), '.');
+}
+
+$pulseLatestRows = latest_week_rows($userPulseData, $latestIndex);
+$workloadLatestRows = latest_week_rows($userWorkloadData, $latestIndex);
+$pulseLatestAvg = $chartDataAvg[$latestIndex] ?? null;
+$workloadLatestAvg = $chartDataWorkloadAvg[$latestIndex] ?? null;
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -131,6 +161,40 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
             height: 400px;
             margin-top: 1.5rem;
         }
+
+        /* Small latest-week table under each chart */
+        .latest-week {
+            margin-top: 1.5rem;
+            max-width: 420px;
+        }
+
+        .latest-week table {
+            font-size: 0.9rem;
+        }
+
+        .latest-week caption {
+            caption-side: top;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            padding-bottom: 0.5rem;
+        }
+
+        .latest-week th,
+        .latest-week td {
+            padding: 0.4rem 0.75rem;
+        }
+
+        .latest-week td.rating,
+        .latest-week th.rating {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .latest-week tr.team-average td {
+            font-weight: 600;
+            border-top: 2px solid var(--gray-200);
+        }
     </style>
 </head>
 <body>
@@ -154,6 +218,7 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
                 <div class="chart-container">
                     <canvas id="pulseChart"></canvas>
                 </div>
+                <?php $latestRows = $pulseLatestRows; $latestAvg = $pulseLatestAvg; $latestMetric = 'Pulse'; include __DIR__ . '/../../../includes/latest_week_table.php'; ?>
             </div>
             
             <!-- Workload Report -->
@@ -163,6 +228,7 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
                 <div class="chart-container">
                     <canvas id="workloadChart"></canvas>
                 </div>
+                <?php $latestRows = $workloadLatestRows; $latestAvg = $workloadLatestAvg; $latestMetric = 'Workload'; include __DIR__ . '/../../../includes/latest_week_table.php'; ?>
             </div>
         </div>
     </main>
