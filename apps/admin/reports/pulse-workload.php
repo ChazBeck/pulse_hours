@@ -71,6 +71,7 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
     <link rel="stylesheet" href="<?= url('assets/admin-styles.css') ?>">
     <link rel="stylesheet" href="<?= url('assets/admin-nav-styles.css') ?>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="<?= url('assets/chart-export.js') ?>"></script>
     <style>
         .reports-container {
             padding: 2rem;
@@ -117,6 +118,14 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
             border-bottom: 2px solid var(--primary-color);
         }
         
+        .report-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
         .chart-container {
             position: relative;
             height: 400px;
@@ -130,9 +139,12 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
     
     <main class="admin-content">
         <div class="reports-container">
-            <div class="report-header">
-                <h1>Pulse & Workload Trends</h1>
-                <p>Team morale and workload intensity over the last 8 weeks</p>
+            <div class="report-header report-header-row">
+                <div>
+                    <h1>Pulse & Workload Trends</h1>
+                    <p>Team morale and workload intensity over the last 8 weeks</p>
+                </div>
+                <button type="button" id="downloadChartsBtn" class="btn btn-primary">Download charts (JPEG)</button>
             </div>
             
             <!-- Pulse Report -->
@@ -211,7 +223,7 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
             pointBorderWidth: 2
         });
         
-        new Chart(ctx, {
+        const pulseChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: <?= json_encode($weekLabels) ?>,
@@ -341,7 +353,7 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
             pointBorderWidth: 2
         });
         
-        new Chart(ctxWorkload, {
+        const workloadChart = new Chart(ctxWorkload, {
             type: 'line',
             data: {
                 labels: <?= json_encode($weekLabels) ?>,
@@ -426,6 +438,26 @@ $userWorkloadData = $pulseRepo->getByUserAndWeeks('work_load', $yearWeeks);
                     }
                 }
             }
+        });
+
+        // Download both charts as 5.17" x 2.5" JPEGs (team average only, no legend or titles).
+        // Renders off-screen copies; the charts on this page are not changed.
+        document.getElementById('downloadChartsBtn').addEventListener('click', function () {
+            const btn = this;
+            const label = btn.textContent;
+            const suffix = <?= json_encode($yearWeeks[0] . '_to_' . end($yearWeeks)) ?>;
+            btn.disabled = true;
+            btn.textContent = 'Preparing…';
+            PulseChartExport.downloadChartsAsJpeg([
+                { chart: pulseChart, filename: 'team-pulse_' + suffix + '.jpg' },
+                { chart: workloadChart, filename: 'team-workload_' + suffix + '.jpg' }
+            ], 5.17, 2.5, 300).catch(function (err) {
+                console.error(err);
+                alert('Sorry, the charts could not be downloaded.');
+            }).finally(function () {
+                btn.disabled = false;
+                btn.textContent = label;
+            });
         });
     </script>
 </body>
