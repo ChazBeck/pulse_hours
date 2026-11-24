@@ -14,6 +14,19 @@
     // exact print pixel size.
     var LAYOUT_CSS_WIDTH = 620;
 
+    // JPEG has no transparency: paint the background white.
+    var WHITE_BACKGROUND = {
+        id: 'whiteBackground',
+        beforeDraw: function (c) {
+            var ctx = c.ctx;
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.restore();
+        }
+    };
+
     function findAverageDataset(chart) {
         var sets = chart.data.datasets;
         for (var i = 0; i < sets.length; i++) {
@@ -71,18 +84,56 @@
                     }
                 }
             },
-            plugins: [{
-                // JPEG has no transparency: paint the background white.
-                id: 'whiteBackground',
-                beforeDraw: function (c) {
-                    var ctx = c.ctx;
-                    ctx.save();
-                    ctx.globalCompositeOperation = 'destination-over';
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, c.width, c.height);
-                    ctx.restore();
-                }
-            }]
+            plugins: [WHITE_BACKGROUND]
+        };
+    }
+
+    // Deep-copy plain option/data values, dropping functions (click handlers,
+    // tooltip callbacks) that the static copy does not need.
+    function plainCopy(value) {
+        if (typeof value === 'function') return undefined;
+        if (Array.isArray(value)) return value.map(plainCopy);
+        if (value && typeof value === 'object') {
+            var out = {};
+            Object.keys(value).forEach(function (k) {
+                if (k.charAt(0) === '_' || k.charAt(0) === '$') return;
+                var v = plainCopy(value[k]);
+                if (v !== undefined) out[k] = v;
+            });
+            return out;
+        }
+        return value;
+    }
+
+    // Copy the whole on-screen chart as it is, with titles and tooltip off.
+    // opts.legend: keep the key (true) or hide it (false).
+    function cloneConfig(chart, pixelRatio, opts) {
+        var options = plainCopy(chart.config.options) || {};
+        options.responsive = false;
+        options.maintainAspectRatio = false;
+        options.animation = false;
+        options.devicePixelRatio = pixelRatio;
+        options.events = [];
+        // A small margin so labels never touch the image edge.
+        options.layout = { padding: { left: 10, right: 12, top: 10, bottom: 6 } };
+        options.plugins = options.plugins || {};
+        options.plugins.title = { display: false };
+        options.plugins.subtitle = { display: false };
+        options.plugins.tooltip = { enabled: false };
+        options.plugins.legend = options.plugins.legend || {};
+        options.plugins.legend.display = !!opts.legend;
+
+        return {
+            type: chart.config.type,
+            data: {
+                labels: chart.data.labels.slice(),
+                datasets: chart.data.datasets.map(function (ds, i) {
+                    // Keep whatever is hidden on screen hidden in the copy too.
+                    return Object.assign(plainCopy(ds), { hidden: !chart.isDatasetVisible(i) });
+                })
+            },
+            options: options,
+            plugins: [WHITE_BACKGROUND]
         };
     }
 
@@ -110,12 +161,19 @@
 
     /**
      * Render `chart` as a JPEG Blob of exactly widthIn x heightIn at `dpi`.
+     * opts (optional):
+     *   mode: 'average' (default) = team-average line only, no legend;
+     *         'clone' = the chart as shown on screen, minus tooltip/titles.
+     *   legend: for 'clone', keep the key.
+     *   layoutWidth: CSS px width to lay the copy out at (sets text size
+     *         relative to the image; default LAYOUT_CSS_WIDTH).
      * Resolves to a Blob.
      */
-    function renderChartJpeg(chart, widthIn, heightIn, dpi) {
+    function renderChartJpeg(chart, widthIn, heightIn, dpi, opts) {
+        opts = opts || {};
         var pxW = Math.round(widthIn * dpi);
         var pxH = Math.round(heightIn * dpi);
-        var cssW = LAYOUT_CSS_WIDTH;
+        var cssW = opts.layoutWidth || LAYOUT_CSS_WIDTH;
         var cssH = Math.round(cssW * heightIn / widthIn);
         var ratio = pxW / cssW;
 
@@ -132,7 +190,10 @@
 
         var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
         return ready.then(function () {
-            var copy = new global.Chart(canvas, exportConfig(chart, ratio));
+            var config = opts.mode === 'clone'
+                ? cloneConfig(chart, ratio, opts)
+                : exportConfig(chart, ratio);
+            var copy = new global.Chart(canvas, config);
 
             // Resample onto a canvas of the exact pixel size, on white.
             var out = document.createElement('canvas');
@@ -171,12 +232,13 @@
     }
 
     /**
-     * items: [{ chart, filename }]. Renders and downloads each in turn.
+     * items: [{ chart, filename, options? }] (options as for renderChartJpeg).
+     * Renders and downloads each in turn.
      */
     function downloadChartsAsJpeg(items, widthIn, heightIn, dpi) {
         return items.reduce(function (p, item) {
             return p.then(function () {
-                return renderChartJpeg(item.chart, widthIn, heightIn, dpi).then(function (blob) {
+                return renderChartJpeg(item.chart, widthIn, heightIn, dpi, item.options).then(function (blob) {
                     downloadBlob(blob, item.filename);
                     // A short gap so the browser treats them as separate downloads.
                     return new Promise(function (r) { setTimeout(r, 400); });
