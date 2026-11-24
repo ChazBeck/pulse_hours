@@ -547,14 +547,18 @@ foreach ($clientTotals as $item) {
             }
         });
 
+        // Printed size of each downloaded image, in inches (width x height).
+        const CHART_EXPORT_WIDTH_IN = 4.8;
+        const CHART_EXPORT_HEIGHT_IN = 5.8;
+
         // Download both charts as JPEGs for reports: no titles; the team
         // member chart keeps its key. The charts on this page are not changed.
         document.getElementById('downloadChartsBtn').addEventListener('click', function () {
             const btn = this;
             const label = btn.textContent;
             const week = <?= json_encode($selectedWeek) ?>;
-            // Laid out at the on-screen chart width so text keeps its proportions.
-            const exportOptions = { mode: 'clone', layoutWidth: 770 };
+            // ~103 CSS px per printed inch keeps the text at a readable size.
+            const exportOptions = { mode: 'clone', layoutWidth: Math.round(CHART_EXPORT_WIDTH_IN * 103) };
             btn.disabled = true;
             btn.textContent = 'Preparing…';
             PulseChartExport.downloadChartsAsJpeg([
@@ -570,9 +574,6 @@ foreach ($clientTotals as $item) {
                 btn.textContent = label;
             });
         });
-        // Printed size of each downloaded image, in inches.
-        const CHART_EXPORT_WIDTH_IN = 7.5;
-        const CHART_EXPORT_HEIGHT_IN = 5;
     </script>
 </body>
 </html>
