@@ -563,7 +563,8 @@ foreach ($clientTotals as $item) {
             btn.textContent = 'Preparing…';
             PulseChartExport.downloadChartsAsJpeg([
                 { chart: clientHoursChart, filename: 'hours-by-team-member_' + week + '.jpg',
-                  options: Object.assign({ legend: true }, exportOptions) },
+                  // A smaller key than on screen so it doesn't crowd the chart.
+                  options: Object.assign({ legend: true, legendStyle: { size: 9, boxWidth: 9, padding: 7 } }, exportOptions) },
                 { chart: clientTotalsChart, filename: 'total-hours-by-client_' + week + '.jpg',
                   options: Object.assign({ legend: false }, exportOptions) }
             ], CHART_EXPORT_WIDTH_IN, CHART_EXPORT_HEIGHT_IN, 300).catch(function (err) {

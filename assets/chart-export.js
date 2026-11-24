@@ -122,6 +122,14 @@
         options.plugins.tooltip = { enabled: false };
         options.plugins.legend = options.plugins.legend || {};
         options.plugins.legend.display = !!opts.legend;
+        // Optional smaller key for the image: { size, boxWidth, padding }.
+        if (opts.legend && opts.legendStyle) {
+            var labels = options.plugins.legend.labels = options.plugins.legend.labels || {};
+            var st = opts.legendStyle;
+            labels.font = Object.assign({}, labels.font, { size: st.size });
+            if (st.boxWidth) { labels.boxWidth = st.boxWidth; labels.boxHeight = st.boxWidth; }
+            if (st.padding != null) labels.padding = st.padding;
+        }
 
         return {
             type: chart.config.type,
@@ -165,6 +173,8 @@
      *   mode: 'average' (default) = team-average line only, no legend;
      *         'clone' = the chart as shown on screen, minus tooltip/titles.
      *   legend: for 'clone', keep the key.
+     *   legendStyle: for 'clone' with legend, { size, boxWidth, padding }
+     *         to draw a smaller key than on screen.
      *   layoutWidth: CSS px width to lay the copy out at (sets text size
      *         relative to the image; default LAYOUT_CSS_WIDTH).
      * Resolves to a Blob.
